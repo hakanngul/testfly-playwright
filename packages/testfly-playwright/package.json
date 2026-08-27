@@ -1,0 +1,85 @@
+{
+  "name": "@testfly/playwright",
+  "version": "0.1.0",
+  "description": "Zero-boilerplate, type-safe, batteries-included TypeScript & Playwright framework with native BDD support",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./config": {
+      "types": "./dist/config/index.d.ts",
+      "import": "./dist/config/index.mjs",
+      "require": "./dist/config/index.js"
+    },
+    "./fixtures": {
+      "types": "./dist/fixtures/index.d.ts",
+      "import": "./dist/fixtures/index.mjs",
+      "require": "./dist/fixtures/index.js"
+    },
+    "./client": {
+      "types": "./dist/client/index.d.ts",
+      "import": "./dist/client/index.mjs",
+      "require": "./dist/client/index.js"
+    },
+    "./db": {
+      "types": "./dist/db/index.d.ts",
+      "import": "./dist/db/index.mjs",
+      "require": "./dist/db/index.js"
+    },
+    "./mail": {
+      "types": "./dist/mail/index.d.ts",
+      "import": "./dist/mail/index.mjs",
+      "require": "./dist/mail/index.js"
+    },
+    "./steps": {
+      "types": "./dist/steps/index.d.ts",
+      "import": "./dist/steps/index.mjs",
+      "require": "./dist/steps/index.js"
+    }
+  },
+  "bin": {
+    "testfly": "./bin/testfly.js"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "playwright",
+    "bdd",
+    "cucumber",
+    "testing",
+    "automation",
+    "testfly",
+    "typescript"
+  ],
+  "author": "TestFly Team",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "commander": "^12.1.0",
+    "playwright-bdd": "^8.2.0",
+    "zod": "^3.23.8"
+  },
+  "peerDependencies": {
+    "@playwright/test": ">=1.40.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.50.1",
+    "@types/node": "^20.14.0",
+    "tsup": "^8.3.6",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}

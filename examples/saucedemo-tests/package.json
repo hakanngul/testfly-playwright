@@ -1,0 +1,24 @@
+{
+  "name": "saucedemo-tests",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "clean": "testfly clean",
+    "test": "testfly test",
+    "test:ui": "testfly test --ui",
+    "test:report": "testfly report",
+    "test:report:allure": "testfly report --allure",
+    "test:report:cucumber": "testfly report --cucumber"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@testfly/playwright": "*"
+  },
+  "devDependencies": {
+    "allure-playwright": "^3.0.9"
+  }
+}

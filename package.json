@@ -1,0 +1,33 @@
+{
+  "name": "testfly-playwright-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The Next.js of Test Automation — TypeScript & Playwright framework with native BDD support",
+  "workspaces": [
+    "packages/*",
+    "examples/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace=@testfly/playwright",
+    "test": "npm run test --workspace=@testfly/playwright",
+    "test:demo": "npm run test --workspace=starter-demo",
+    "typecheck": "npm run typecheck --workspace=@testfly/playwright"
+  },
+  "overrides": {
+    "@playwright/test": "1.50.1",
+    "playwright": "1.50.1"
+  },
+  "keywords": [
+    "playwright",
+    "bdd",
+    "cucumber",
+    "test-automation",
+    "testing",
+    "testfly"
+  ],
+  "author": "TestFly Team",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "allure-playwright": "^3.0.9"
+  }
+}
