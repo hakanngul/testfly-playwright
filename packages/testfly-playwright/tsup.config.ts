@@ -19,6 +19,7 @@ export default defineConfig({
     'doctor/index': 'src/doctor/index.ts',
     'visual/index': 'src/visual/index.ts',
     'faker/index': 'src/faker/index.ts',
+    'mobile/index': 'src/mobile/index.ts',
     'cli/bin': 'src/cli/bin.ts',
   },
   format: ['esm', 'cjs'],

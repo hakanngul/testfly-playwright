@@ -7,6 +7,7 @@ import { runGenerate } from './generate';
 import { runCi } from './ci';
 import { runDoctor } from './doctor';
 import { runStepsCommand } from './steps';
+import { runMobileCommand } from './mobile';
 
 export function createCli(): Command {
   const program = new Command();
@@ -26,9 +27,17 @@ export function createCli(): Command {
 
   program
     .command('doctor')
-    .description('Diagnose project health, configuration, browsers, and BDD step mappings')
+    .description('Diagnose project health, configuration, browsers, mobile devices, and BDD step mappings')
     .action(async () => {
       await runDoctor();
+    });
+
+  program
+    .command('mobile [action]')
+    .description('Manage and inspect mobile devices, emulators, and simulators (devices)')
+    .option('-a, --all', 'List all available simulators/emulators (including shutdown)')
+    .action(async (action, options) => {
+      await runMobileCommand(action || 'devices', options);
     });
 
   program
@@ -40,6 +49,7 @@ export function createCli(): Command {
     .action(async (options) => {
       await runStepsCommand(options);
     });
+
 
   program
     .command('clean')
@@ -104,5 +114,7 @@ export * from './generate';
 export * from './ci';
 export * from './doctor';
 export * from './steps';
+export * from './mobile';
+
 
 

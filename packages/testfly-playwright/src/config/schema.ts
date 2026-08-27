@@ -35,6 +35,16 @@ export const ReportingConfigSchema = z.object({
   aiTriage: z.boolean().default(false),
 });
 
+export const MobileConfigSchema = z.object({
+  platform: z.enum(['ios', 'android', 'auto']).default('auto'),
+  bundleId: z.string().optional(),
+  deviceName: z.string().optional(),
+  installApps: z.string().optional(),
+  timeout: z.number().default(15000),
+  serverUrl: z.string().optional(),
+  env: z.record(z.string()).optional(),
+});
+
 export const TestFlyConfigSchema = z.object({
   baseUrl: z.string().default('http://localhost:3000'),
   apiBaseUrl: z.string().optional(),
@@ -44,8 +54,11 @@ export const TestFlyConfigSchema = z.object({
   mail: MailConfigSchema.optional(),
   auth: AuthConfigSchema.default({}),
   reporting: ReportingConfigSchema.default({}),
+  mobile: MobileConfigSchema.optional(),
   custom: z.record(z.unknown()).optional(),
 });
 
 export type TestFlyConfig = z.infer<typeof TestFlyConfigSchema>;
 export type TestFlyConfigInput = z.input<typeof TestFlyConfigSchema>;
+export type MobileConfig = z.infer<typeof MobileConfigSchema>;
+

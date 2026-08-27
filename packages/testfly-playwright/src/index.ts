@@ -40,6 +40,14 @@ export type { OpenApiEndpoint, GeneratedFeatureResult } from './generator/OpenAp
 export { VisualClient } from './visual/VisualClient';
 export type { VisualSnapshotOptions } from './visual/VisualClient';
 export { FakerClient } from './faker/FakerClient';
+export { MobileClient } from './mobile/MobileClient';
+export type { MobileLaunchOptions } from './mobile/MobileClient';
+export { MobileScreen } from './mobile/MobileScreen';
+export { MobileLocator } from './mobile/MobileLocator';
+export type { MobileLocatorOptions, MobileRole } from './mobile/MobileLocator';
+export { DeviceDetector } from './mobile/DeviceDetector';
+export type { MobileDeviceItem } from './mobile/DeviceDetector';
+
 
 
 

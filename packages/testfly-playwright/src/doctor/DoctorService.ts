@@ -125,6 +125,29 @@ export class DoctorService {
       });
     }
 
+    // 7. Mobile Environment Diagnostic (Android ADB & iOS Simulators)
+    const { DeviceDetector } = await import('../mobile/DeviceDetector');
+    const hasAdb = DeviceDetector.isAdbAvailable();
+    const hasSimctl = DeviceDetector.isSimctlAvailable();
+    const activeDevices = DeviceDetector.getActiveDevices();
+
+    if (hasAdb || hasSimctl) {
+      const toolNames = [hasAdb ? 'Android (adb)' : null, hasSimctl ? 'iOS (simctl)' : null].filter(Boolean).join(', ');
+      checks.push({
+        name: 'Mobile Test Environment',
+        status: 'pass',
+        message: `${toolNames} hazır. (${activeDevices.length} aktif cihaz/emülatör)`,
+      });
+    } else {
+      checks.push({
+        name: 'Mobile Test Environment',
+        status: 'warn',
+        message: 'Mobil araçlar (adb / xcrun simctl) sistem PATH üzerinde bulunamadı (Web/API testleri etkilenmez)',
+        solution: 'Mobil testler için Android SDK veya Xcode Command Line Tools yükleyin',
+      });
+    }
+
     return checks;
   }
 }
+

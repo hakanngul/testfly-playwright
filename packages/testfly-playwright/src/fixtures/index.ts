@@ -9,6 +9,8 @@ import { MockClient } from '../mock/MockClient';
 import { PerformanceClient } from '../performance/PerformanceClient';
 import { VisualClient } from '../visual/VisualClient';
 import { FakerClient } from '../faker/FakerClient';
+import { MobileClient } from '../mobile/MobileClient';
+import { MobileScreen } from '../mobile/MobileScreen';
 
 import { apiFixture } from './api.fixture';
 import { dbFixture } from './db.fixture';
@@ -20,6 +22,7 @@ import { mockFixture } from './mock.fixture';
 import { performanceFixture } from './performance.fixture';
 import { visualFixture } from './visual.fixture';
 import { fakerFixture } from './faker.fixture';
+import { mobileFixture } from './mobile.fixture';
 
 export interface TestFlyFixtures {
   api: ApiClient;
@@ -33,6 +36,8 @@ export interface TestFlyFixtures {
   visual: VisualClient;
   faker: FakerClient;
   data: FakerClient;
+  mobile: MobileClient;
+  screen: MobileScreen;
 }
 
 export const test = base.extend<TestFlyFixtures>({
@@ -66,6 +71,14 @@ export const test = base.extend<TestFlyFixtures>({
     const fakerClient = new FakerClient();
     await use(fakerClient);
   },
+  mobile: async ({}, use) => {
+    const mobileClient = new MobileClient();
+    await use(mobileClient);
+  },
+  screen: async ({}, use) => {
+    const mobileClient = new MobileClient();
+    await use(mobileClient.screen);
+  },
 });
 
 export { expect } from '@playwright/test';
@@ -79,6 +92,8 @@ export * from './mock.fixture';
 export * from './performance.fixture';
 export * from './visual.fixture';
 export * from './faker.fixture';
+export * from './mobile.fixture';
+
 
 
 

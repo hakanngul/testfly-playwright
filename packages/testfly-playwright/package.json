@@ -85,6 +85,11 @@
       "types": "./dist/faker/index.d.ts",
       "import": "./dist/faker/index.mjs",
       "require": "./dist/faker/index.js"
+    },
+    "./mobile": {
+      "types": "./dist/mobile/index.d.ts",
+      "import": "./dist/mobile/index.mjs",
+      "require": "./dist/mobile/index.js"
     }
   },
   "bin": {
