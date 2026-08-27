@@ -278,4 +278,23 @@ export class ApiClient {
     });
     return this.wrapResponse<T>(raw);
   }
+
+  /**
+   * Validate response data or arbitrary payload against a Zod schema or validator
+   */
+  public assertSchema<T>(
+    dataOrResponse: ApiResponse<T> | any,
+    schema: { safeParse: (data: any) => { success: boolean; error?: any; data?: any } }
+  ): void {
+    const targetData =
+      dataOrResponse && typeof dataOrResponse === 'object' && 'data' in dataOrResponse
+        ? dataOrResponse.data
+        : dataOrResponse;
+
+    const result = schema.safeParse(targetData);
+    if (!result.success) {
+      const formattedErrors = JSON.stringify(result.error?.issues || result.error?.format() || result.error, null, 2);
+      throw new Error(`❌ API Schema Validation Failed:\n${formattedErrors}`);
+    }
+  }
 }

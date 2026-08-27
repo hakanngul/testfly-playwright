@@ -6,6 +6,7 @@ import { StepLogger } from '../steps/StepLogger';
 import { AuthManager } from '../auth/AuthManager';
 import { A11yClient } from '../a11y/A11yClient';
 import { MockClient } from '../mock/MockClient';
+import { PerformanceClient } from '../performance/PerformanceClient';
 
 import { apiFixture } from './api.fixture';
 import { dbFixture } from './db.fixture';
@@ -14,6 +15,7 @@ import { stepFixture } from './step.fixture';
 import { authFixture } from './auth.fixture';
 import { a11yFixture } from './a11y.fixture';
 import { mockFixture } from './mock.fixture';
+import { performanceFixture } from './performance.fixture';
 
 export interface TestFlyFixtures {
   api: ApiClient;
@@ -23,6 +25,7 @@ export interface TestFlyFixtures {
   auth: AuthManager;
   a11y: A11yClient;
   mock: MockClient;
+  performance: PerformanceClient;
 }
 
 export const test = base.extend<TestFlyFixtures>({
@@ -40,6 +43,10 @@ export const test = base.extend<TestFlyFixtures>({
     await use(mockClient);
     await mockClient.reset();
   },
+  performance: async ({ page }, use) => {
+    const performanceClient = new PerformanceClient(page);
+    await use(performanceClient);
+  },
 });
 
 export { expect } from '@playwright/test';
@@ -50,4 +57,6 @@ export * from './step.fixture';
 export * from './auth.fixture';
 export * from './a11y.fixture';
 export * from './mock.fixture';
+export * from './performance.fixture';
+
 

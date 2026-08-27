@@ -5,6 +5,8 @@ import { runTestCommand } from './test';
 import { runClean } from './clean';
 import { runGenerate } from './generate';
 import { runCi } from './ci';
+import { runDoctor } from './doctor';
+import { runStepsCommand } from './steps';
 
 export function createCli(): Command {
   const program = new Command();
@@ -20,6 +22,23 @@ export function createCli(): Command {
     .option('-f, --force', 'Overwrite existing template files')
     .action(async (options) => {
       await runInit({ force: options.force });
+    });
+
+  program
+    .command('doctor')
+    .description('Diagnose project health, configuration, browsers, and BDD step mappings')
+    .action(async () => {
+      await runDoctor();
+    });
+
+  program
+    .command('steps')
+    .description('Audit unmapped BDD steps and auto-generate TypeScript definitions')
+    .option('-s, --scaffold', 'Auto-generate missing step definitions to steps/unmapped.steps.ts')
+    .option('-f, --features <dir>', 'Custom features directory')
+    .option('-t, --steps <dir>', 'Custom steps directory')
+    .action(async (options) => {
+      await runStepsCommand(options);
     });
 
   program
@@ -83,4 +102,7 @@ export * from './test';
 export * from './clean';
 export * from './generate';
 export * from './ci';
+export * from './doctor';
+export * from './steps';
+
 

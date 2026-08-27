@@ -27,4 +27,15 @@ export { MockClient } from './mock/MockClient';
 export type { MockResponseOptions, InterceptedRequest } from './mock/MockClient';
 export { RedisClient } from './db/RedisClient';
 export type { RedisEntry } from './db/RedisClient';
+export { PerformanceClient } from './performance/PerformanceClient';
+export type { WebVitals } from './performance/PerformanceClient';
+export { DoctorService } from './doctor/DoctorService';
+export type { DoctorCheckItem } from './doctor/DoctorService';
+export { StepScanner } from './scanner/StepScanner';
+export type { FeatureStepItem, UnmappedStepResult } from './scanner/StepScanner';
+export { NotificationManager } from './notifications/NotificationManager';
+export type { NotificationPayload } from './notifications/NotificationManager';
+export { OpenApiGenerator } from './generator/OpenApiGenerator';
+export type { OpenApiEndpoint, GeneratedFeatureResult } from './generator/OpenApiGenerator';
+
 
