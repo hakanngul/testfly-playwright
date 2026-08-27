@@ -51,5 +51,30 @@ test.describe('TestFly Enterprise Standart Spec Testleri', () => {
     expect(results).toBeDefined();
     expect(results.passes.length).toBeGreaterThan(0);
   });
+
+  test('5. Dinamik Test Verisi Üretici (Faker / Data Factory)', async ({ faker, step }) => {
+    await step.info('Dinamik kullanıcı, TCKN ve ödeme verileri üretiliyor');
+    const fullName = faker.person.fullName();
+    const tcKimlik = faker.person.tcKimlik();
+    const email = faker.internet.email();
+    const creditCard = faker.finance.creditCardNumber('visa');
+    const phone = faker.phone.phoneNumber();
+
+    expect(fullName).toBeDefined();
+    expect(tcKimlik).toHaveLength(11);
+    expect(email).toContain('@');
+    expect(creditCard.startsWith('4')).toBe(true);
+    expect(phone.startsWith('+90 5')).toBe(true);
+  });
+
+  test('6. Core Web Vitals & Sayfa Performans Denetimi', async ({ page, performance, step }) => {
+    await step.info('Sayfa yükleniyor ve Web Vitals metrikleri ölçülüyor');
+    await page.goto('https://demo.playwright.dev/todomvc');
+
+    const vitals = await performance.getVitals();
+    expect(vitals).toBeDefined();
+    expect(vitals.domContentLoaded).toBeGreaterThanOrEqual(0);
+    expect(vitals.ttfb).toBeGreaterThanOrEqual(0);
+  });
 });
 

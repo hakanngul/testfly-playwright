@@ -37,5 +37,9 @@ export { NotificationManager } from './notifications/NotificationManager';
 export type { NotificationPayload } from './notifications/NotificationManager';
 export { OpenApiGenerator } from './generator/OpenApiGenerator';
 export type { OpenApiEndpoint, GeneratedFeatureResult } from './generator/OpenApiGenerator';
+export { VisualClient } from './visual/VisualClient';
+export type { VisualSnapshotOptions } from './visual/VisualClient';
+export { FakerClient } from './faker/FakerClient';
+
 
 

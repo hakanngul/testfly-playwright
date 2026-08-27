@@ -7,6 +7,8 @@ import { AuthManager } from '../auth/AuthManager';
 import { A11yClient } from '../a11y/A11yClient';
 import { MockClient } from '../mock/MockClient';
 import { PerformanceClient } from '../performance/PerformanceClient';
+import { VisualClient } from '../visual/VisualClient';
+import { FakerClient } from '../faker/FakerClient';
 
 import { apiFixture } from './api.fixture';
 import { dbFixture } from './db.fixture';
@@ -16,6 +18,8 @@ import { authFixture } from './auth.fixture';
 import { a11yFixture } from './a11y.fixture';
 import { mockFixture } from './mock.fixture';
 import { performanceFixture } from './performance.fixture';
+import { visualFixture } from './visual.fixture';
+import { fakerFixture } from './faker.fixture';
 
 export interface TestFlyFixtures {
   api: ApiClient;
@@ -26,6 +30,9 @@ export interface TestFlyFixtures {
   a11y: A11yClient;
   mock: MockClient;
   performance: PerformanceClient;
+  visual: VisualClient;
+  faker: FakerClient;
+  data: FakerClient;
 }
 
 export const test = base.extend<TestFlyFixtures>({
@@ -47,6 +54,18 @@ export const test = base.extend<TestFlyFixtures>({
     const performanceClient = new PerformanceClient(page);
     await use(performanceClient);
   },
+  visual: async ({ page }, use) => {
+    const visualClient = new VisualClient(page);
+    await use(visualClient);
+  },
+  faker: async ({}, use) => {
+    const fakerClient = new FakerClient();
+    await use(fakerClient);
+  },
+  data: async ({}, use) => {
+    const fakerClient = new FakerClient();
+    await use(fakerClient);
+  },
 });
 
 export { expect } from '@playwright/test';
@@ -58,5 +77,8 @@ export * from './auth.fixture';
 export * from './a11y.fixture';
 export * from './mock.fixture';
 export * from './performance.fixture';
+export * from './visual.fixture';
+export * from './faker.fixture';
+
 
 

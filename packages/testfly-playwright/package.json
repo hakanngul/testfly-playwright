@@ -75,6 +75,16 @@
       "types": "./dist/doctor/index.d.ts",
       "import": "./dist/doctor/index.mjs",
       "require": "./dist/doctor/index.js"
+    },
+    "./visual": {
+      "types": "./dist/visual/index.d.ts",
+      "import": "./dist/visual/index.mjs",
+      "require": "./dist/visual/index.js"
+    },
+    "./faker": {
+      "types": "./dist/faker/index.d.ts",
+      "import": "./dist/faker/index.mjs",
+      "require": "./dist/faker/index.js"
     }
   },
   "bin": {
