@@ -11,13 +11,64 @@ export async function runInit(options: InitOptions = {}): Promise<void> {
   console.log(`\n🚀 Initializing TestFly Playwright project in: ${targetDir}\n`);
 
   // 1. Create directories
-  const dirsToCreate = ['features', 'steps', 'tests'];
+  const dirsToCreate = ['features', 'steps', 'tests', path.join('.agents', 'skills', 'testfly-bdd')];
   for (const dir of dirsToCreate) {
     const fullPath = path.join(targetDir, dir);
     if (!fs.existsSync(fullPath)) {
       fs.mkdirSync(fullPath, { recursive: true });
       console.log(`  📁 Created directory: ${dir}/`);
     }
+  }
+
+  // 1.2. Create AGENTS.md
+  const agentsMdPath = path.join(targetDir, 'AGENTS.md');
+  if (!fs.existsSync(agentsMdPath) || options.force) {
+    const agentsMdContent = `# Agent Guidelines for TestFly Playwright Projects
+
+This repository uses **TestFly Playwright**, an enterprise-grade BDD and Test Automation framework.
+
+## 🎯 Core Rule: BDD-First Agentic Workflow
+When implementing new features, modifying existing flows, or writing automated tests:
+
+1. **Never write code immediately.** Always propose a Gherkin \`.feature\` scenario diff first (\`Given / When / Then\`).
+2. **Review & Iterate**: Refine scenario wording with the user until approved.
+3. **Implement**:
+   - Write/update step definitions in \`steps/*.steps.ts\` importing from \`@testfly/playwright\`.
+   - Use built-in fixtures: \`{ page, api, db, mail, step }\`.
+   - Write standard Playwright spec tests in \`tests/*.spec.ts\` when testing technical/API unit flows.
+4. **Clean & Verify**:
+   - Clean artifacts: \`npx testfly clean\` (or \`npm run clean\`)
+   - Run tests: \`npx testfly test\` (or \`npm test\`)
+   - Open reports: \`npx testfly report --allure\` (or \`npm run test:report:allure\`)
+`;
+    fs.writeFileSync(agentsMdPath, agentsMdContent, 'utf8');
+    console.log(`  📄 Created: AGENTS.md`);
+  }
+
+  // 1.4. Create .agents/skills/testfly-bdd/SKILL.md
+  const skillPath = path.join(targetDir, '.agents', 'skills', 'testfly-bdd', 'SKILL.md');
+  if (!fs.existsSync(skillPath) || options.force) {
+    const skillContent = `---
+name: testfly-bdd
+description: Implements the BDD-first agentic workflow using TestFly Playwright. Use whenever adding or modifying features, user flows, or automated tests to propose Gherkin .feature scenarios first before writing implementation code.
+---
+
+# TestFly BDD Agent Workflow
+
+This skill guides AI agents in following a **Behavior-Driven Development (BDD)** first workflow using \`@testfly/playwright\`.
+
+## 🔄 Agent Execution Steps
+1. **Propose Scenario First (Guardrail)**: Propose a clean scenario diff in \`features/<name>.feature\` before writing code.
+2. **Await Approval**: Iterate with the user until the scenario is approved.
+3. **Implement**:
+   - Import from \`@testfly/playwright\`: \`import { Given, When, Then, expect } from '@testfly/playwright';\`
+   - Use fixtures: \`{ page, api, db, mail, step }\`.
+4. **Validate**:
+   - Run tests: \`npx testfly test\`
+   - Clean artifacts: \`npx testfly clean\`
+`;
+    fs.writeFileSync(skillPath, skillContent, 'utf8');
+    console.log(`  📄 Created: .agents/skills/testfly-bdd/SKILL.md`);
   }
 
   // 1.5. Create .gitignore if not exists
