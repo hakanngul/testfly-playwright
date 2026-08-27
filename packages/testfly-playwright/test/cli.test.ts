@@ -23,12 +23,17 @@ describe('TestFly CLI Init', () => {
 
     expect(fs.existsSync(path.join(tempDir, 'testfly.config.ts'))).toBe(true);
     expect(fs.existsSync(path.join(tempDir, 'playwright.config.ts'))).toBe(true);
+    expect(fs.existsSync(path.join(tempDir, '.gitignore'))).toBe(true);
+    expect(fs.existsSync(path.join(tempDir, 'AGENTS.md'))).toBe(true);
+    expect(fs.existsSync(path.join(tempDir, '.agents', 'skills', 'testfly-bdd', 'SKILL.md'))).toBe(true);
     expect(fs.existsSync(path.join(tempDir, 'features', 'demo.feature'))).toBe(true);
     expect(fs.existsSync(path.join(tempDir, 'steps', 'demo.steps.ts'))).toBe(true);
     expect(fs.existsSync(path.join(tempDir, 'tests', 'demo.spec.ts'))).toBe(true);
 
     const updatedPkg = JSON.parse(fs.readFileSync(path.join(tempDir, 'package.json'), 'utf8'));
-    expect(updatedPkg.scripts['test']).toBe('bddgen && playwright test');
-    expect(updatedPkg.scripts['bdd:generate']).toBe('bddgen');
+    expect(updatedPkg.scripts['test']).toBe('testfly test');
+    expect(updatedPkg.scripts['clean']).toBe('testfly clean');
+    expect(updatedPkg.scripts['test:report']).toBe('testfly report');
+    expect(updatedPkg.scripts['test:report:allure']).toBe('testfly report --allure');
   });
 });

@@ -40,6 +40,26 @@
       "types": "./dist/steps/index.d.ts",
       "import": "./dist/steps/index.mjs",
       "require": "./dist/steps/index.js"
+    },
+    "./a11y": {
+      "types": "./dist/a11y/index.d.ts",
+      "import": "./dist/a11y/index.mjs",
+      "require": "./dist/a11y/index.js"
+    },
+    "./mock": {
+      "types": "./dist/mock/index.d.ts",
+      "import": "./dist/mock/index.mjs",
+      "require": "./dist/mock/index.js"
+    },
+    "./generator": {
+      "types": "./dist/generator/index.d.ts",
+      "import": "./dist/generator/index.mjs",
+      "require": "./dist/generator/index.js"
+    },
+    "./notifications": {
+      "types": "./dist/notifications/index.d.ts",
+      "import": "./dist/notifications/index.mjs",
+      "require": "./dist/notifications/index.js"
     }
   },
   "bin": {
@@ -68,6 +88,7 @@
   "author": "TestFly Team",
   "license": "Apache-2.0",
   "dependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "commander": "^12.1.0",
     "playwright-bdd": "^8.2.0",
     "zod": "^3.23.8"

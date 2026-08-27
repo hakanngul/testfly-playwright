@@ -1,0 +1,63 @@
+name: TestFly Automation Suite
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: 'Filter tests by tag (e.g. @smoke, @api, @ui)'
+        required: false
+        default: ''
+
+jobs:
+  test:
+    name: Run TestFly Playwright Tests
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers with dependencies
+        run: npx playwright install --with-deps chromium
+
+      - name: Run TestFly Tests
+        run: |
+          if [ -n "${{ github.event.inputs.tags }}" ]; then
+            npx testfly test --grep "${{ github.event.inputs.tags }}"
+          else
+            npx testfly test
+          fi
+
+      - name: Generate Allure Static Report
+        if: always()
+        run: npx testfly report --allure --generate
+
+      - name: Upload Test Reports Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testfly-reports
+          path: reports/
+          retention-days: 14
+
+      - name: Upload Playwright Trace & Artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testfly-traces
+          path: reports/test-results/
+          retention-days: 7

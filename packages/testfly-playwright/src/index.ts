@@ -21,3 +21,10 @@ export type { EmailMessage, WaitForEmailOptions } from './mail/types';
 export { StepLogger } from './steps/StepLogger';
 export type { StepLogEntry } from './steps/StepLogger';
 export { AuthManager } from './auth/AuthManager';
+export { A11yClient } from './a11y/A11yClient';
+export type { A11yOptions } from './a11y/A11yClient';
+export { MockClient } from './mock/MockClient';
+export type { MockResponseOptions, InterceptedRequest } from './mock/MockClient';
+export { RedisClient } from './db/RedisClient';
+export type { RedisEntry } from './db/RedisClient';
+

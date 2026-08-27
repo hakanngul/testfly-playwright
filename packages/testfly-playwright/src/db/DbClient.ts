@@ -1,9 +1,11 @@
 import { DbQueryResult, DbTableOperations } from './types';
 import { getTestFlyConfig } from '../config';
+import { RedisClient } from './RedisClient';
 
 export class DbClient {
   private inMemoryStore: Map<string, Map<string | number, Record<string, any>>> = new Map();
   private autoIncrementIds: Map<string, number> = new Map();
+  public redis: RedisClient = new RedisClient();
 
   constructor() {
     this.initDefaultTables();

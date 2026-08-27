@@ -3,6 +3,8 @@ import { runInit } from './init';
 import { runReport } from './report';
 import { runTestCommand } from './test';
 import { runClean } from './clean';
+import { runGenerate } from './generate';
+import { runCi } from './ci';
 
 export function createCli(): Command {
   const program = new Command();
@@ -25,6 +27,23 @@ export function createCli(): Command {
     .description('Clean all generated reports, test results, and BDD artifacts (like mvn clean)')
     .action(async () => {
       await runClean();
+    });
+
+  program
+    .command('generate')
+    .description('Generate BDD features and steps from OpenAPI / Swagger spec')
+    .option('-s, --swagger <pathOrUrl>', 'Swagger / OpenAPI JSON/YAML file path or URL')
+    .option('-o, --output-dir <dir>', 'Output directory for feature files (default: features)')
+    .action(async (options) => {
+      await runGenerate(options);
+    });
+
+  program
+    .command('ci [provider]')
+    .description('Generate CI/CD pipeline template (github, gitlab)')
+    .option('-f, --force', 'Overwrite existing pipeline configuration')
+    .action(async (provider, options) => {
+      await runCi({ provider, force: options.force });
     });
 
   program
@@ -62,3 +81,6 @@ export * from './init';
 export * from './report';
 export * from './test';
 export * from './clean';
+export * from './generate';
+export * from './ci';
+
