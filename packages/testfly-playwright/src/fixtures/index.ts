@@ -13,6 +13,9 @@ import { MobileClient } from '../mobile/MobileClient';
 import { MobileScreen } from '../mobile/MobileScreen';
 import { TestContext } from '../context/TestContext';
 import { TestDataManager } from '../context/TestDataManager';
+import { LocatorRegistry } from '../locators/LocatorRegistry';
+import { TypedLocatorKey } from '../locators/types';
+import { Locator } from '@playwright/test';
 
 import { apiFixture } from './api.fixture';
 import { dbFixture } from './db.fixture';
@@ -26,6 +29,7 @@ import { visualFixture } from './visual.fixture';
 import { fakerFixture } from './faker.fixture';
 import { mobileFixture } from './mobile.fixture';
 import { contextFixture } from './context.fixture';
+import { locatorsFixture, locateFixture } from './locator.fixture';
 
 export interface TestFlyFixtures {
   api: ApiClient;
@@ -45,7 +49,10 @@ export interface TestFlyFixtures {
   testContext: TestContext;
   state: TestContext;
   testData: TestDataManager;
+  locators: LocatorRegistry;
+  locate: (key: TypedLocatorKey) => Locator;
 }
+
 
 export const test = base.extend<TestFlyFixtures>({
   api: apiFixture,
@@ -102,8 +109,9 @@ export const test = base.extend<TestFlyFixtures>({
     const testDataManager = new TestDataManager();
     await use(testDataManager);
   },
+  locators: locatorsFixture,
+  locate: locateFixture,
 });
-
 
 export { expect } from '@playwright/test';
 export * from './api.fixture';
@@ -118,6 +126,8 @@ export * from './visual.fixture';
 export * from './faker.fixture';
 export * from './mobile.fixture';
 export * from './context.fixture';
+export * from './locator.fixture';
+
 
 
 

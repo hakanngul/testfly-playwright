@@ -95,6 +95,11 @@
       "types": "./dist/context/index.d.ts",
       "import": "./dist/context/index.mjs",
       "require": "./dist/context/index.js"
+    },
+    "./locators": {
+      "types": "./dist/locators/index.d.ts",
+      "import": "./dist/locators/index.mjs",
+      "require": "./dist/locators/index.js"
     }
   },
   "bin": {
@@ -126,6 +131,7 @@
     "@axe-core/playwright": "^4.13.0",
     "commander": "^12.1.0",
     "playwright-bdd": "^8.2.0",
+    "yaml": "^2.9.0",
     "zod": "^3.23.8"
   },
   "peerDependencies": {

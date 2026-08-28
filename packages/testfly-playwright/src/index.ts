@@ -49,6 +49,11 @@ export { DeviceDetector } from './mobile/DeviceDetector';
 export type { MobileDeviceItem } from './mobile/DeviceDetector';
 export { TestContext } from './context/TestContext';
 export { TestDataManager } from './context/TestDataManager';
+export { LocatorRegistry } from './locators/LocatorRegistry';
+export { LocatorParser } from './locators/LocatorParser';
+export { LocatorTypeGen } from './locators/LocatorTypeGen';
+export type { LocatorDef, SingleLocatorDef, PlatformLocatorDef, ParsedLocatorItem } from './locators/types';
+
 
 
 

@@ -21,6 +21,7 @@ export default defineConfig({
     'faker/index': 'src/faker/index.ts',
     'mobile/index': 'src/mobile/index.ts',
     'context/index': 'src/context/index.ts',
+    'locators/index': 'src/locators/index.ts',
     'cli/bin': 'src/cli/bin.ts',
   },
   format: ['esm', 'cjs'],

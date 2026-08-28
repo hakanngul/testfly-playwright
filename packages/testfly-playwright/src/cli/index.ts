@@ -8,6 +8,7 @@ import { runCi } from './ci';
 import { runDoctor } from './doctor';
 import { runStepsCommand } from './steps';
 import { runMobileCommand } from './mobile';
+import { runLocatorsCommand } from './locators';
 
 export function createCli(): Command {
   const program = new Command();
@@ -33,12 +34,22 @@ export function createCli(): Command {
     });
 
   program
+    .command('locators')
+    .description('Generate TypeScript type definitions from YAML/JSON locator repository')
+    .option('-d, --dir <dir>', 'Locators directory (default: locators)')
+    .option('-o, --output <file>', 'Output TypeScript declaration file (default: locators/index.d.ts)')
+    .action(async (options) => {
+      await runLocatorsCommand(options);
+    });
+
+  program
     .command('mobile [action]')
     .description('Manage and inspect mobile devices, emulators, and simulators (devices)')
     .option('-a, --all', 'List all available simulators/emulators (including shutdown)')
     .action(async (action, options) => {
       await runMobileCommand(action || 'devices', options);
     });
+
 
   program
     .command('steps')
@@ -115,6 +126,8 @@ export * from './ci';
 export * from './doctor';
 export * from './steps';
 export * from './mobile';
+export * from './locators';
+
 
 
 
