@@ -1,0 +1,17 @@
+{
+  "name": "quality-gate-demo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TestFly Playwright Quality Gates (Visual Snapshot, Axe-Core A11y, Core Web Vitals) Demo",
+  "scripts": {
+    "clean": "testfly clean",
+    "test": "testfly test",
+    "test:ui": "testfly test --ui"
+  },
+  "dependencies": {
+    "@testfly/playwright": "file:../.."
+  },
+  "devDependencies": {
+    "allure-playwright": "^3.0.9"
+  }
+}

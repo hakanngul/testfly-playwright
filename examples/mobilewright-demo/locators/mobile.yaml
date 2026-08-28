@@ -1,0 +1,15 @@
+page: mobile_app
+elements:
+  welcome_title:
+    web: { role: heading, name: "Welcome to Mobile App" }
+    ios: { label: "header_welcome" }
+    android: { testid: "txt_welcome" }
+  onboarding_carousel:
+    ios: { label: "carousel_onboarding" }
+    android: { testid: "view_carousel" }
+  get_started_btn:
+    ios: { label: "btn_get_started" }
+    android: { testid: "btn_get_started" }
+  login_sheet:
+    ios: { label: "sheet_login" }
+    android: { testid: "sheet_login" }

@@ -1,0 +1,17 @@
+{
+  "name": "enterprise-fullstack-demo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TestFly Playwright Enterprise Full-Stack E2E (API + DB + Redis + Mail OTP + UI) Demo",
+  "scripts": {
+    "clean": "testfly clean",
+    "test": "testfly test",
+    "test:ui": "testfly test --ui"
+  },
+  "dependencies": {
+    "@testfly/playwright": "file:../.."
+  },
+  "devDependencies": {
+    "allure-playwright": "^3.0.9"
+  }
+}

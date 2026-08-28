@@ -1,0 +1,13 @@
+page: login
+elements:
+  username_field:
+    testid: "username"
+    name: "Username"
+  password_field:
+    testid: "password"
+    name: "Password"
+  login_button:
+    testid: "login-button"
+    name: "Login"
+  error_message:
+    testid: "error"
