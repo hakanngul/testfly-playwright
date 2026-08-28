@@ -47,6 +47,9 @@ export { MobileLocator } from './mobile/MobileLocator';
 export type { MobileLocatorOptions, MobileRole } from './mobile/MobileLocator';
 export { DeviceDetector } from './mobile/DeviceDetector';
 export type { MobileDeviceItem } from './mobile/DeviceDetector';
+export { TestContext } from './context/TestContext';
+export { TestDataManager } from './context/TestDataManager';
+
 
 
 

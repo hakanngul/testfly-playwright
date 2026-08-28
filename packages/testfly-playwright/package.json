@@ -90,6 +90,11 @@
       "types": "./dist/mobile/index.d.ts",
       "import": "./dist/mobile/index.mjs",
       "require": "./dist/mobile/index.js"
+    },
+    "./context": {
+      "types": "./dist/context/index.d.ts",
+      "import": "./dist/context/index.mjs",
+      "require": "./dist/context/index.js"
     }
   },
   "bin": {

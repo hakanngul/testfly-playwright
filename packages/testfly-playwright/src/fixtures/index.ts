@@ -11,6 +11,8 @@ import { VisualClient } from '../visual/VisualClient';
 import { FakerClient } from '../faker/FakerClient';
 import { MobileClient } from '../mobile/MobileClient';
 import { MobileScreen } from '../mobile/MobileScreen';
+import { TestContext } from '../context/TestContext';
+import { TestDataManager } from '../context/TestDataManager';
 
 import { apiFixture } from './api.fixture';
 import { dbFixture } from './db.fixture';
@@ -23,6 +25,7 @@ import { performanceFixture } from './performance.fixture';
 import { visualFixture } from './visual.fixture';
 import { fakerFixture } from './faker.fixture';
 import { mobileFixture } from './mobile.fixture';
+import { contextFixture } from './context.fixture';
 
 export interface TestFlyFixtures {
   api: ApiClient;
@@ -38,6 +41,10 @@ export interface TestFlyFixtures {
   data: FakerClient;
   mobile: MobileClient;
   screen: MobileScreen;
+  scenarioContext: TestContext;
+  testContext: TestContext;
+  state: TestContext;
+  testData: TestDataManager;
 }
 
 export const test = base.extend<TestFlyFixtures>({
@@ -79,7 +86,24 @@ export const test = base.extend<TestFlyFixtures>({
     const mobileClient = new MobileClient();
     await use(mobileClient.screen);
   },
+  scenarioContext: async ({}, use) => {
+    const testContext = new TestContext();
+    await use(testContext);
+  },
+  testContext: async ({}, use) => {
+    const testContext = new TestContext();
+    await use(testContext);
+  },
+  state: async ({}, use) => {
+    const testContext = new TestContext();
+    await use(testContext);
+  },
+  testData: async ({}, use) => {
+    const testDataManager = new TestDataManager();
+    await use(testDataManager);
+  },
 });
+
 
 export { expect } from '@playwright/test';
 export * from './api.fixture';
@@ -93,6 +117,8 @@ export * from './performance.fixture';
 export * from './visual.fixture';
 export * from './faker.fixture';
 export * from './mobile.fixture';
+export * from './context.fixture';
+
 
 
 
