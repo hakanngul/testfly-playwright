@@ -12,8 +12,9 @@
     "test:report:cucumber": "testfly report --cucumber"
   },
   "dependencies": {
-    "@testfly/playwright": "*"
+    "@testfly/playwright": "file:../.."
   },
+
   "devDependencies": {
     "allure-playwright": "^3.0.9"
   }
