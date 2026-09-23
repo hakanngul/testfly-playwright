@@ -18,6 +18,7 @@ import { TypedLocatorKey } from '../locators/types';
 import { Locator } from '@playwright/test';
 
 
+import { SmartForm } from '../quality/form/SmartForm';
 import { apiFixture } from './api.fixture';
 import { dbFixture } from './db.fixture';
 import { mailFixture } from './mail.fixture';
@@ -52,6 +53,9 @@ export interface TestFlyFixtures {
   testData: TestDataManager;
   locators: LocatorRegistry;
   locate: (key: TypedLocatorKey) => Locator;
+  form: {
+    fill: (formData: Record<string, string | number | boolean>, root?: Locator) => Promise<void>;
+  };
 }
 
 
@@ -61,6 +65,11 @@ export const test = base.extend<TestFlyFixtures>({
   mail: mailFixture,
   step: stepFixture,
   auth: authFixture,
+  form: async ({ page }, use) => {
+    await use({
+      fill: (formData, root) => SmartForm.fill(page, formData, root),
+    });
+  },
   a11y: async ({ page }, use) => {
     const a11yClient = new A11yClient(page);
     await use(a11yClient);

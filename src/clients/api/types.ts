@@ -18,6 +18,8 @@ export interface ApiResponse<T = any> {
   headers: Record<string, string>;
   data: T;
   raw: APIResponse;
+  duration: number;
+  responseTimeMs: number;
   text: () => Promise<string>;
   json: <R = T>() => Promise<R>;
   body: () => Promise<Buffer>;

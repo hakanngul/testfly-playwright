@@ -56,6 +56,8 @@ export { A11yClient } from './quality/a11y/A11yClient';
 export type { A11yOptions } from './quality/a11y/A11yClient';
 export { PerformanceClient } from './quality/performance/PerformanceClient';
 export type { WebVitals } from './quality/performance/PerformanceClient';
+export { SmartForm, fillForm } from './quality/form/SmartForm';
+export type { SmartFormFieldMap } from './quality/form/SmartForm';
 
 // CLI & Tools
 export { DoctorService } from './cli/doctor/DoctorService';

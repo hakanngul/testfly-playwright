@@ -1,4 +1,4 @@
-import type { APIRequestContext, APIResponse } from '@playwright/test';
+import { test, type APIRequestContext, type APIResponse } from '@playwright/test';
 import { ApiRequestOptions, ApiResponse, ApiAuthManager } from './types';
 import { getTestFlyConfig } from '../../core/config';
 
@@ -117,7 +117,12 @@ export class ApiClient {
     };
   }
 
-  private async wrapResponse<T>(raw: APIResponse): Promise<ApiResponse<T>> {
+  private async wrapResponse<T>(
+    raw: APIResponse,
+    duration: number = 0,
+    method?: string,
+    url?: string
+  ): Promise<ApiResponse<T>> {
     let data: any = null;
     const contentType = raw.headers()['content-type'] || '';
 
@@ -136,6 +141,31 @@ export class ApiClient {
       data = null;
     }
 
+    // Auto attachment to Playwright test report if running in test context
+    try {
+      const testInfo = test.info();
+      if (testInfo) {
+        await testInfo.attach(`API ${method || 'REQUEST'} [${raw.status()}] (${duration}ms)`, {
+          body: JSON.stringify(
+            {
+              method,
+              url,
+              status: raw.status(),
+              statusText: raw.statusText(),
+              durationMs: duration,
+              headers: raw.headers(),
+              response: data,
+            },
+            null,
+            2
+          ),
+          contentType: 'application/json',
+        });
+      }
+    } catch {
+      // test.info() is unavailable outside active test worker
+    }
+
     return {
       status: raw.status(),
       statusText: raw.statusText(),
@@ -143,6 +173,8 @@ export class ApiClient {
       headers: raw.headers(),
       data,
       raw,
+      duration,
+      responseTimeMs: duration,
       text: () => raw.text(),
       json: <R = T>() => raw.json() as Promise<R>,
       body: () => raw.body(),
@@ -155,6 +187,7 @@ export class ApiClient {
   public async get<T = any>(endpoint: string, options?: ApiRequestOptions): Promise<ApiResponse<T>> {
     const url = this.resolveUrl(endpoint);
     const headers = this.mergeHeaders(options?.headers);
+    const start = Date.now();
     const raw = await this.request.get(url, {
       headers,
       params: options?.params,
@@ -162,7 +195,7 @@ export class ApiClient {
       failOnStatusCode: options?.failOnStatusCode,
       ignoreHTTPSErrors: options?.ignoreHTTPSErrors,
     });
-    return this.wrapResponse<T>(raw);
+    return this.wrapResponse<T>(raw, Date.now() - start, 'GET', url);
   }
 
   /**
@@ -171,6 +204,7 @@ export class ApiClient {
   public async post<T = any>(endpoint: string, options?: ApiRequestOptions): Promise<ApiResponse<T>> {
     const url = this.resolveUrl(endpoint);
     const headers = this.mergeHeaders(options?.headers);
+    const start = Date.now();
     const raw = await this.request.post(url, {
       headers,
       params: options?.params,
@@ -181,7 +215,7 @@ export class ApiClient {
       failOnStatusCode: options?.failOnStatusCode,
       ignoreHTTPSErrors: options?.ignoreHTTPSErrors,
     });
-    return this.wrapResponse<T>(raw);
+    return this.wrapResponse<T>(raw, Date.now() - start, 'POST', url);
   }
 
   /**
@@ -190,6 +224,7 @@ export class ApiClient {
   public async put<T = any>(endpoint: string, options?: ApiRequestOptions): Promise<ApiResponse<T>> {
     const url = this.resolveUrl(endpoint);
     const headers = this.mergeHeaders(options?.headers);
+    const start = Date.now();
     const raw = await this.request.put(url, {
       headers,
       params: options?.params,
@@ -200,7 +235,7 @@ export class ApiClient {
       failOnStatusCode: options?.failOnStatusCode,
       ignoreHTTPSErrors: options?.ignoreHTTPSErrors,
     });
-    return this.wrapResponse<T>(raw);
+    return this.wrapResponse<T>(raw, Date.now() - start, 'PUT', url);
   }
 
   /**
@@ -209,6 +244,7 @@ export class ApiClient {
   public async patch<T = any>(endpoint: string, options?: ApiRequestOptions): Promise<ApiResponse<T>> {
     const url = this.resolveUrl(endpoint);
     const headers = this.mergeHeaders(options?.headers);
+    const start = Date.now();
     const raw = await this.request.patch(url, {
       headers,
       params: options?.params,
@@ -219,7 +255,7 @@ export class ApiClient {
       failOnStatusCode: options?.failOnStatusCode,
       ignoreHTTPSErrors: options?.ignoreHTTPSErrors,
     });
-    return this.wrapResponse<T>(raw);
+    return this.wrapResponse<T>(raw, Date.now() - start, 'PATCH', url);
   }
 
   /**
@@ -228,6 +264,7 @@ export class ApiClient {
   public async delete<T = any>(endpoint: string, options?: ApiRequestOptions): Promise<ApiResponse<T>> {
     const url = this.resolveUrl(endpoint);
     const headers = this.mergeHeaders(options?.headers);
+    const start = Date.now();
     const raw = await this.request.delete(url, {
       headers,
       params: options?.params,
@@ -238,7 +275,7 @@ export class ApiClient {
       failOnStatusCode: options?.failOnStatusCode,
       ignoreHTTPSErrors: options?.ignoreHTTPSErrors,
     });
-    return this.wrapResponse<T>(raw);
+    return this.wrapResponse<T>(raw, Date.now() - start, 'DELETE', url);
   }
 
   /**
@@ -247,6 +284,7 @@ export class ApiClient {
   public async head(endpoint: string, options?: ApiRequestOptions): Promise<ApiResponse<any>> {
     const url = this.resolveUrl(endpoint);
     const headers = this.mergeHeaders(options?.headers);
+    const start = Date.now();
     const raw = await this.request.head(url, {
       headers,
       params: options?.params,
@@ -254,7 +292,7 @@ export class ApiClient {
       failOnStatusCode: options?.failOnStatusCode,
       ignoreHTTPSErrors: options?.ignoreHTTPSErrors,
     });
-    return this.wrapResponse(raw);
+    return this.wrapResponse(raw, Date.now() - start, 'HEAD', url);
   }
 
   /**
@@ -266,8 +304,10 @@ export class ApiClient {
   ): Promise<ApiResponse<T>> {
     const url = this.resolveUrl(endpoint);
     const headers = this.mergeHeaders(options?.headers);
+    const method = options?.method || 'GET';
+    const start = Date.now();
     const raw = await this.request.fetch(url, {
-      method: options?.method || 'GET',
+      method,
       headers,
       params: options?.params,
       data: options?.data,
@@ -277,7 +317,22 @@ export class ApiClient {
       failOnStatusCode: options?.failOnStatusCode,
       ignoreHTTPSErrors: options?.ignoreHTTPSErrors,
     });
-    return this.wrapResponse<T>(raw);
+    return this.wrapResponse<T>(raw, Date.now() - start, method, url);
+  }
+
+  /**
+   * Execute GraphQL query/mutation
+   */
+  public async graphql<T = any>(
+    query: string,
+    variables?: Record<string, any>,
+    options?: ApiRequestOptions & { endpoint?: string }
+  ): Promise<ApiResponse<T>> {
+    const endpoint = options?.endpoint || '/graphql';
+    return this.post<T>(endpoint, {
+      ...options,
+      data: { query, variables },
+    });
   }
 
   /**

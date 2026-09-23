@@ -25,6 +25,7 @@ export interface SingleLocatorDef {
   role?: string;
   name?: string;
   exact?: boolean;
+  fallbacks?: (string | SingleLocatorDef)[];
 }
 
 export interface PlatformLocatorDef {

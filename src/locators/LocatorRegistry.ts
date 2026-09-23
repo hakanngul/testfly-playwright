@@ -78,6 +78,22 @@ export class LocatorRegistry {
   }
 
   private createWebLocator(page: Page, def: SingleLocatorDef): Locator {
+    let loc = this.buildSingleWebLocator(page, def);
+
+    if (def.fallbacks && Array.isArray(def.fallbacks)) {
+      for (const fallback of def.fallbacks) {
+        const fallbackLoc =
+          typeof fallback === 'string'
+            ? page.locator(fallback)
+            : this.buildSingleWebLocator(page, fallback);
+        loc = loc.or(fallbackLoc);
+      }
+    }
+
+    return loc;
+  }
+
+  private buildSingleWebLocator(page: Page, def: SingleLocatorDef): Locator {
     const type = def.type || 'css';
     const value = def.value || '';
     const exact = def.exact;
