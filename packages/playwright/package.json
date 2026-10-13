@@ -3,7 +3,7 @@
   "version": "0.2.0-next.0",
   "description": "Zero-boilerplate, batteries-included Playwright framework: BDD, typed YAML locators, self-healing, API/DB/mail fixtures and stability analytics.",
   "license": "Apache-2.0",
-  "author": "Hakan G\u00fcl",
+  "author": "Hakan Gül",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/hakanngul/testfly-playwright.git"
@@ -123,10 +123,10 @@
   },
   "peerDependencies": {
     "@playwright/test": ">=1.50.0 <2",
-    "pg": "^8.0.0",
-    "mysql2": "^3.0.0",
+    "imapflow": "^1.0.0 || ^2.0.0",
     "ioredis": "^5.0.0 || ^6.0.0",
-    "imapflow": "^1.0.0 || ^2.0.0"
+    "mysql2": "^3.0.0",
+    "pg": "^8.0.0"
   },
   "peerDependenciesMeta": {
     "pg": {
@@ -146,6 +146,10 @@
     "@playwright/test": "^1.64.0",
     "@types/node": "^22.10.0",
     "@types/pg": "^8.11.0",
+    "imapflow": "^2.4.0",
+    "ioredis": "^6.0.0",
+    "mysql2": "^3.24.6",
+    "pg": "^8.23.1",
     "tsup": "^8.5.1",
     "typescript": "~5.9.3",
     "vitest": "^5.0.4"
