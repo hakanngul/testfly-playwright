@@ -1,0 +1,17 @@
+{
+  "workflowSizeGuideline": "medium",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/agent-memory-session.sh",
+            "timeout": 10,
+            "statusMessage": "Injecting agent-memory session context"
+          }
+        ]
+      }
+    ]
+  }
+}
