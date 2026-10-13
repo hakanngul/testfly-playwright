@@ -1,145 +1,119 @@
-import { Page, Locator } from '@playwright/test';
-import { MobileScreen } from '../clients/mobile/MobileScreen';
-import { MobileLocator } from '../clients/mobile/MobileLocator';
-
-import { LocatorDef, SingleLocatorDef, ParsedLocatorItem } from './types';
+import path from 'node:path';
+import type { Locator, Page } from '@playwright/test';
+import { TestFlyError } from '../core/errors';
+import { buildLocator } from './build';
 import { LocatorParser } from './LocatorParser';
+import { normalizeDef } from './schema';
+import type { LocatorDef, ParsedLocatorItem } from './types';
 
+const cache = new Map<string, LocatorRegistry>();
+
+/**
+ * In-memory catalog of validated locator definitions.
+ *
+ * Holds read-only data only (no Page), so instances can be shared across tests of a worker.
+ * @public
+ */
 export class LocatorRegistry {
-  private locatorsMap = new Map<string, LocatorDef>();
+  private readonly map = new Map<string, LocatorDef>();
 
+  /** @param locatorsDir optional directory to load right away. */
   constructor(locatorsDir?: string) {
-    if (locatorsDir) {
-      this.loadDirectory(locatorsDir);
-    }
+    if (locatorsDir) this.loadDirectory(locatorsDir);
   }
 
   /**
-   * Register locator definition under a namespace key (e.g. `login.username_input`)
+   * Load (and cache per absolute directory) a catalog.
+   * Throws `TF_LOCATOR_INVALID` with file and key when a definition is invalid.
    */
-  register(key: string, definition: LocatorDef): this {
-    this.locatorsMap.set(key, definition);
+  static fromDir(dir: string): LocatorRegistry {
+    const abs = path.resolve(dir);
+    let reg = cache.get(abs);
+    if (!reg) {
+      reg = new LocatorRegistry(abs);
+      cache.set(abs, reg);
+    }
+    return reg;
+  }
+
+  /** Drop cached registries (useful for watch mode and tests). */
+  static clearCache(): void {
+    cache.clear();
+  }
+
+  /** Register a definition (string selector, object or legacy `type/value`). */
+  register(key: string, definition: unknown): this {
+    this.map.set(key, normalizeDef(definition, key));
     return this;
   }
 
-  /**
-   * Load and register all locator files from directory
-   */
+  /** Load every locator file of a directory and validate cross references. */
   loadDirectory(dirPath: string): this {
-    const items = LocatorParser.parseDirectory(dirPath);
-    for (const item of items) {
-      this.locatorsMap.set(item.fullKey, item.definition);
-    }
+    for (const item of LocatorParser.parseDirectory(dirPath)) this.map.set(item.fullKey, item.definition);
+    this.validate();
     return this;
   }
 
-  /**
-   * Get raw locator definition by key
-   */
   get(key: string): LocatorDef | undefined {
-    return this.locatorsMap.get(key);
+    return this.map.get(key);
+  }
+
+  has(key: string): boolean {
+    return this.map.has(key);
+  }
+
+  keys(): string[] {
+    return [...this.map.keys()];
+  }
+
+  items(): ParsedLocatorItem[] {
+    return [...this.map.entries()].map(([fullKey, definition]) => {
+      const i = fullKey.indexOf('.');
+      return { page: fullKey.slice(0, i), name: fullKey.slice(i + 1), fullKey, definition };
+    });
+  }
+
+  /** Throws when a `within` target is missing or circular. */
+  validate(): void {
+    for (const [key, def] of this.map) {
+      const defs = [def, ...(def.fallbacks ?? [])];
+      for (const d of defs) {
+        const seen = [key];
+        let cur: LocatorDef | undefined = d;
+        while (cur?.within) {
+          if (!this.map.has(cur.within)) {
+            throw new TestFlyError('TF_LOCATOR_INVALID', `Locator "${key}": "within: ${cur.within}" does not exist.`, {
+              hint: 'Use the full key of another locator, e.g. "login.form".',
+              details: { key },
+            });
+          }
+          if (seen.includes(cur.within)) {
+            throw new TestFlyError('TF_LOCATOR_INVALID', `Locator "${key}": circular "within" chain ${[...seen, cur.within].join(' → ')}.`, { details: { key } });
+          }
+          seen.push(cur.within);
+          cur = this.map.get(cur.within);
+        }
+      }
+    }
   }
 
   /**
-   * Resolve an actual Playwright Web Locator from a key or definition
+   * Build the plain Playwright locator (primary + YAML fallbacks, no healing).
+   * Throws `TF_LOCATOR_NOT_FOUND` for unknown keys.
    */
-  resolveWeb(page: Page, keyOrDef: string | LocatorDef): Locator {
-    const def = typeof keyOrDef === 'string' ? this.locatorsMap.get(keyOrDef) : keyOrDef;
-
-    if (!def) {
-      if (typeof keyOrDef === 'string') {
-        // If not found in registry, fallback to direct CSS/XPath selector
-        return page.locator(keyOrDef);
-      }
-      throw new Error(`Locator definition not found for key: ${keyOrDef}`);
-    }
-
-    const singleDef: SingleLocatorDef = (def as any).web || (def as SingleLocatorDef);
-    return this.createWebLocator(page, singleDef);
+  resolve(page: Page, key: string): Locator {
+    return buildLocator(page, this.require(key), (k) => this.map.get(k));
   }
 
-  /**
-   * Resolve a Mobilewright MobileLocator from a key or definition
-   */
-  resolveMobile(screen: MobileScreen, keyOrDef: string | LocatorDef, platform: 'ios' | 'android' = 'android'): MobileLocator {
-    const def = typeof keyOrDef === 'string' ? this.locatorsMap.get(keyOrDef) : keyOrDef;
-
-    if (!def) {
-      if (typeof keyOrDef === 'string') {
-        return screen.locator(keyOrDef);
-      }
-      throw new Error(`Mobile locator definition not found for key: ${keyOrDef}`);
-    }
-
-    const singleDef: SingleLocatorDef =
-      (def as any)[platform] || (def as any).mobile || (def as SingleLocatorDef);
-
-    return this.createMobileLocator(screen, singleDef);
-  }
-
-  private createWebLocator(page: Page, def: SingleLocatorDef): Locator {
-    let loc = this.buildSingleWebLocator(page, def);
-
-    if (def.fallbacks && Array.isArray(def.fallbacks)) {
-      for (const fallback of def.fallbacks) {
-        const fallbackLoc =
-          typeof fallback === 'string'
-            ? page.locator(fallback)
-            : this.buildSingleWebLocator(page, fallback);
-        loc = loc.or(fallbackLoc);
-      }
-    }
-
-    return loc;
-  }
-
-  private buildSingleWebLocator(page: Page, def: SingleLocatorDef): Locator {
-    const type = def.type || 'css';
-    const value = def.value || '';
-    const exact = def.exact;
-
-    switch (type) {
-      case 'role':
-        return page.getByRole((def.role || value) as any, {
-          name: def.name || value,
-          exact,
-        });
-      case 'label':
-        return page.getByLabel(value, { exact });
-      case 'text':
-        return page.getByText(value, { exact });
-      case 'testid':
-        return page.getByTestId(value);
-      case 'placeholder':
-        return page.getByPlaceholder(value, { exact });
-      case 'alt':
-        return page.getByAltText(value, { exact });
-      case 'title':
-        return page.getByTitle(value, { exact });
-      case 'css':
-      case 'xpath':
-      default:
-        return page.locator(value);
-    }
-  }
-
-  private createMobileLocator(screen: MobileScreen, def: SingleLocatorDef): MobileLocator {
-    const type = def.type || 'label';
-    const value = def.value || '';
-
-    switch (type) {
-      case 'role':
-        return screen.getByRole((def.role || value) as any, { name: def.name || value });
-      case 'label':
-        return screen.getByLabel(value);
-      case 'text':
-        return screen.getByText(value);
-      case 'testid':
-        return screen.getByTestId(value);
-      case 'type':
-        return screen.getByType(value);
-      default:
-        return screen.locator(value);
-    }
+  /** Definition of a key or `TF_LOCATOR_NOT_FOUND` (with close-match suggestions). */
+  require(key: string): LocatorDef {
+    const def = this.map.get(key);
+    if (def) return def;
+    const page = key.split('.')[0];
+    const near = this.keys().filter((k) => k.startsWith(`${page}.`)).slice(0, 5);
+    throw new TestFlyError('TF_LOCATOR_NOT_FOUND', `Locator "${key}" is not defined in the catalog.`, {
+      hint: near.length ? `Known keys on "${page}": ${near.join(', ')}` : 'Add it to a locators/<page>.yaml file and run "testfly locators".',
+      details: { key },
+    });
   }
 }

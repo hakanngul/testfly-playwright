@@ -1,39 +1,35 @@
-import { Page, Locator } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
-export interface SmartFormFieldMap {
-  [key: string]: string | number | boolean;
-}
+/** Field name → value map for {@link FormClient.fill}. @public */
+export type SmartFormFieldMap = Record<string, string | number | boolean>;
 
-export class SmartForm {
-  /**
-   * Smartly fills form fields by resolving labels, placeholders, names, ids or testids
-   */
-  static async fill(page: Page, data: SmartFormFieldMap, root?: Locator): Promise<void> {
-    const scope = root || page;
+/**
+ * Fills form fields found by label, placeholder, `name`, `id` or test id.
+ * Exposed as the `form` fixture.
+ *
+ * @public
+ */
+export class FormClient {
+  constructor(private readonly page: Page) {}
 
+  /** Fill every field of `data`; booleans check/uncheck, everything else is typed as text. */
+  async fill(data: SmartFormFieldMap, root?: Locator): Promise<void> {
+    const scope: Page | Locator = root ?? this.page;
     for (const [key, value] of Object.entries(data)) {
       if (value === undefined || value === null) continue;
-
-      // Cascading smart locator: label -> placeholder -> name attr -> id -> testid
-      const locator = scope
-        .getByLabel(key, { exact: false })
-        .or(scope.getByPlaceholder(key, { exact: false }))
-        .or(scope.locator(`[name="${key}"]`))
-        .or(scope.locator(`#${key}`))
+      const escaped = key.replace(/(["\\])/g, '\\$1');
+      const field = scope
+        .getByLabel(key)
+        .or(scope.getByPlaceholder(key))
+        .or(scope.locator(`[name="${escaped}"]`))
+        .or(scope.locator(`[id="${escaped}"]`))
         .or(scope.getByTestId(key))
         .first();
-
       if (typeof value === 'boolean') {
-        if (value) {
-          await locator.check().catch(async () => locator.click());
-        } else {
-          await locator.uncheck().catch(async () => locator.click());
-        }
+        await field.setChecked(value);
       } else {
-        await locator.fill(String(value));
+        await field.fill(String(value));
       }
     }
   }
 }
-
-export const fillForm = SmartForm.fill;

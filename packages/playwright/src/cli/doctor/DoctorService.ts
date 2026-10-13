@@ -1,7 +1,10 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
+import { createRequire } from 'node:module';
 import { StepScanner } from '../scanner/StepScanner';
+import { findPlaywrightConfig, usesBdd } from '../util';
 
+/** One diagnostic result. @internal */
 export interface DoctorCheckItem {
   name: string;
   status: 'pass' | 'warn' | 'fail';
@@ -9,146 +12,101 @@ export interface DoctorCheckItem {
   solution?: string;
 }
 
+function resolvePackageVersion(name: string, cwd: string): string | undefined {
+  try {
+    const req = createRequire(path.join(cwd, 'noop.js'));
+    const pkgPath = req.resolve(`${name}/package.json`);
+    return (JSON.parse(fs.readFileSync(pkgPath, 'utf8')) as { version?: string }).version;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Project health checks behind `testfly doctor`.
+ * @internal
+ */
 export class DoctorService {
-  /**
-   * Run comprehensive health check on TestFly project environment
-   */
-  static async diagnose(targetDir: string = process.cwd()): Promise<DoctorCheckItem[]> {
+  static async diagnose(cwd: string = process.cwd()): Promise<DoctorCheckItem[]> {
     const checks: DoctorCheckItem[] = [];
 
-    // 1. Node.js Version Check
-    const nodeMajor = parseInt(process.versions.node.split('.')[0], 10);
-    if (nodeMajor >= 18) {
-      checks.push({
-        name: 'Node.js Runtime',
-        status: 'pass',
-        message: `v${process.version} (Uyumlu, >= 18)`,
-      });
+    const nodeMajor = Number.parseInt(process.versions.node.split('.')[0] ?? '0', 10);
+    checks.push(
+      nodeMajor >= 22
+        ? { name: 'Node.js', status: 'pass', message: `v${process.versions.node}` }
+        : { name: 'Node.js', status: 'fail', message: `v${process.versions.node} (Node >= 22 required)`, solution: 'Upgrade Node.js: https://nodejs.org' },
+    );
+
+    const pwVersion = resolvePackageVersion('@playwright/test', cwd);
+    if (!pwVersion) {
+      checks.push({ name: '@playwright/test', status: 'fail', message: 'not installed', solution: 'npm i -D @playwright/test' });
     } else {
-      checks.push({
-        name: 'Node.js Runtime',
-        status: 'fail',
-        message: `v${process.version} (Eski sürüm)`,
-        solution: 'Node.js sürümünüzü v18 veya üstüne güncelleyin: https://nodejs.org',
-      });
+      const major = Number.parseInt(pwVersion.split('.')[0] ?? '0', 10);
+      const minor = Number.parseInt(pwVersion.split('.')[1] ?? '0', 10);
+      const ok = major === 1 && minor >= 50;
+      checks.push(
+        ok
+          ? { name: '@playwright/test', status: 'pass', message: `v${pwVersion}` }
+          : { name: '@playwright/test', status: 'fail', message: `v${pwVersion} (>= 1.50 and < 2 required)`, solution: 'npm i -D @playwright/test@latest' },
+      );
     }
 
-    // 2. Playwright Config Check
-    const pwConfigPath = path.join(targetDir, 'playwright.config.ts');
-    if (fs.existsSync(pwConfigPath)) {
-      checks.push({
-        name: 'Playwright Config',
-        status: 'pass',
-        message: 'playwright.config.ts mevcut',
-      });
+    const configFile = findPlaywrightConfig(cwd);
+    if (!configFile) {
+      checks.push({ name: 'Playwright config', status: 'fail', message: 'playwright.config.* not found', solution: 'npx testfly init' });
     } else {
-      checks.push({
-        name: 'Playwright Config',
-        status: 'fail',
-        message: 'playwright.config.ts bulunamadı',
-        solution: 'Projeyi başlatmak için: npx testfly init',
-      });
-    }
-
-    // 3. TestFly Config Check
-    const tfConfigPath = path.join(targetDir, 'testfly.config.ts');
-    if (fs.existsSync(tfConfigPath)) {
-      checks.push({
-        name: 'TestFly Config',
-        status: 'pass',
-        message: 'testfly.config.ts mevcut',
-      });
-    } else {
-      checks.push({
-        name: 'TestFly Config',
-        status: 'warn',
-        message: 'testfly.config.ts bulunamadı (Varsayılan ayarlar kullanılacak)',
-        solution: 'Özelleştirilmiş ayarlar için: npx testfly init',
-      });
-    }
-
-    // 4. Features & Steps Directories
-    const featuresDir = path.join(targetDir, 'features');
-    const stepsDir = path.join(targetDir, 'steps');
-
-    if (fs.existsSync(featuresDir) && fs.existsSync(stepsDir)) {
-      const featureFiles = fs.readdirSync(featuresDir).filter((f) => f.endsWith('.feature'));
-      const stepFiles = fs.readdirSync(stepsDir).filter((f) => f.endsWith('.ts'));
-
-      checks.push({
-        name: 'BDD Structure',
-        status: 'pass',
-        message: `${featureFiles.length} feature dosyası, ${stepFiles.length} step dosyası mevcut`,
-      });
-
-      // 5. Unmapped steps check
-      const unmapped = StepScanner.findUnmappedSteps(featuresDir, stepsDir);
-      if (unmapped.length === 0) {
+      const text = fs.readFileSync(configFile, 'utf8');
+      checks.push({ name: 'Playwright config', status: 'pass', message: path.basename(configFile) });
+      checks.push(
+        /@testfly\/playwright\/config/.test(text)
+          ? { name: 'TestFly config', status: 'pass', message: 'defineConfig from @testfly/playwright/config' }
+          : {
+              name: 'TestFly config',
+              status: 'warn',
+              message: 'the config does not use defineConfig from @testfly/playwright/config (TestFly options will be defaults)',
+              solution: "import { defineConfig } from '@testfly/playwright/config' and move options under `testfly: {}`",
+            },
+      );
+      if (fs.existsSync(path.join(cwd, 'testfly.config.ts'))) {
         checks.push({
-          name: 'BDD Step Mapping',
-          status: 'pass',
-          message: 'Tüm BDD adımları step tanımları ile eşleşiyor',
-        });
-      } else {
-        checks.push({
-          name: 'BDD Step Mapping',
+          name: 'Legacy config',
           status: 'warn',
-          message: `${unmapped.length} adet eksik/eşleşmeyen step adımı var`,
-          solution: 'Eksik step iskeletlerini oluşturmak için: npx testfly steps --scaffold',
+          message: 'testfly.config.ts is no longer read',
+          solution: 'Move its options into the `testfly` key of playwright.config.ts and delete the file',
         });
       }
-    } else {
-      checks.push({
-        name: 'BDD Structure',
-        status: 'warn',
-        message: 'features/ veya steps/ klasörleri eksik',
-        solution: 'npx testfly init ile BDD klasörlerini oluşturun',
-      });
     }
 
-    // 6. Agentic Workflow Support (AGENTS.md & .agents/skills)
-    const agentsMdPath = path.join(targetDir, 'AGENTS.md');
-    const skillPath = path.join(targetDir, '.agents', 'skills', 'testfly-bdd', 'SKILL.md');
+    const reporterVersion = resolvePackageVersion('@testfly/reporter', cwd);
+    checks.push(
+      reporterVersion
+        ? { name: '@testfly/reporter', status: 'pass', message: `v${reporterVersion}` }
+        : { name: '@testfly/reporter', status: 'warn', message: 'not resolvable from the project', solution: 'npm i -D @testfly/reporter (or set testfly.reporter.enabled to false)' },
+    );
 
-    if (fs.existsSync(agentsMdPath) && fs.existsSync(skillPath)) {
-      checks.push({
-        name: 'Agentic BDD Guidelines',
-        status: 'pass',
-        message: 'AGENTS.md ve testfly-bdd skill kurulu',
-      });
+    const locatorsDir = path.join(cwd, 'locators');
+    if (fs.existsSync(locatorsDir)) {
+      const count = fs.readdirSync(locatorsDir).filter((f) => /\.(ya?ml|json)$/i.test(f)).length;
+      checks.push({ name: 'Locators', status: 'pass', message: `${count} catalog file(s) in locators/` });
     } else {
-      checks.push({
-        name: 'Agentic BDD Guidelines',
-        status: 'warn',
-        message: 'Agent kılavuzu (AGENTS.md) eksik',
-        solution: 'npx testfly init ile agent kılavuzunu kurun',
-      });
+      checks.push({ name: 'Locators', status: 'warn', message: 'locators/ directory not found (only needed for locate())', solution: 'Create locators/<page>.yaml' });
     }
 
-    // 7. Mobile Environment Diagnostic (Android ADB & iOS Simulators)
-    const { DeviceDetector } = await import('../../clients/mobile/DeviceDetector');
-
-    const hasAdb = DeviceDetector.isAdbAvailable();
-    const hasSimctl = DeviceDetector.isSimctlAvailable();
-    const activeDevices = DeviceDetector.getActiveDevices();
-
-    if (hasAdb || hasSimctl) {
-      const toolNames = [hasAdb ? 'Android (adb)' : null, hasSimctl ? 'iOS (simctl)' : null].filter(Boolean).join(', ');
-      checks.push({
-        name: 'Mobile Test Environment',
-        status: 'pass',
-        message: `${toolNames} hazır. (${activeDevices.length} aktif cihaz/emülatör)`,
-      });
-    } else {
-      checks.push({
-        name: 'Mobile Test Environment',
-        status: 'warn',
-        message: 'Mobil araçlar (adb / xcrun simctl) sistem PATH üzerinde bulunamadı (Web/API testleri etkilenmez)',
-        solution: 'Mobil testler için Android SDK veya Xcode Command Line Tools yükleyin',
-      });
+    if (usesBdd(configFile)) {
+      const featuresDir = path.join(cwd, 'features');
+      const stepsDir = path.join(cwd, 'steps');
+      if (fs.existsSync(featuresDir) && fs.existsSync(stepsDir)) {
+        const unmapped = StepScanner.findUnmappedSteps(featuresDir, stepsDir);
+        checks.push(
+          unmapped.length === 0
+            ? { name: 'BDD steps', status: 'pass', message: 'all feature steps have a definition' }
+            : { name: 'BDD steps', status: 'warn', message: `${unmapped.length} step(s) without definition`, solution: 'npx testfly steps --scaffold' },
+        );
+      } else {
+        checks.push({ name: 'BDD steps', status: 'warn', message: 'features/ or steps/ directory missing', solution: 'Create them or adjust testfly.bdd in the config' });
+      }
     }
 
     return checks;
   }
 }
-

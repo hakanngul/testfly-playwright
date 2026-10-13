@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
+/** A Gherkin step found in a feature file. @internal */
 export interface FeatureStepItem {
   keyword: string; // Given, When, Then, And, But
   text: string; // The step sentence without keyword
@@ -9,11 +10,13 @@ export interface FeatureStepItem {
   line: number;
 }
 
+/** A feature step without definition plus a suggested stub. @internal */
 export interface UnmappedStepResult {
   step: FeatureStepItem;
   suggestedCode: string;
 }
 
+/** Cross-checks feature steps with step definitions. @internal */
 export class StepScanner {
   /**
    * Extract all Gherkin steps from .feature files in a directory
@@ -58,10 +61,10 @@ export class StepScanner {
     for (const file of files) {
       const content = fs.readFileSync(file, 'utf8');
       // Matches Given('...', When("...", Then(`...`
-      const matches = content.matchAll(/(?:Given|When|Then)\s*\(\s*['"`](.*?)['"`]/g);
+      const matches = content.matchAll(/\b(?:Given|When|Then|Step)\s*\(\s*(['"`])((?:\\.|(?!\1)[^\\])*)\1/g);
       for (const m of matches) {
-        if (m[1]) {
-          defined.push(m[1]);
+        if (m[2]) {
+          defined.push(m[2].replace(/\\(['"`\\])/g, '$1'));
         }
       }
     }
@@ -119,8 +122,10 @@ export class StepScanner {
     const paramArgs = params.length > 0 ? `, ${params.map((p) => `${p.name}: ${p.type}`).join(', ')}` : '';
     const fixtureArgs = '{ page, step }';
 
-    return `${keyword}('${pattern}', async (${fixtureArgs}${paramArgs}) => {
-  await step.info('${step.text}');
+    const quote = (text: string): string => `'${text.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
+
+    return `${keyword}(${quote(pattern)}, async (${fixtureArgs}${paramArgs}) => {
+  await step.info(${quote(step.text)});
   // TODO: implement step definition
 });`;
   }
@@ -128,10 +133,12 @@ export class StepScanner {
   private static matchStep(stepText: string, pattern: string): boolean {
     // Convert cucumber expressions {string}, {int} into regex
     const regexStr = pattern
-      .replace(/\{string\}/g, '"[^"]+"')
-      .replace(/\{int\}/g, '\\d+')
-      .replace(/\{float\}/g, '\\d+(?:\\.\\d+)?')
-      .replace(/\{word\}/g, '\\w+');
+      .replace(/[.*+?^$()|[\]\\]/g, '\\$&')
+      .replace(/\{string\}/g, '(?:"[^"]*"|\'[^\']*\')')
+      .replace(/\{int\}/g, '-?\\d+')
+      .replace(/\{float\}/g, '-?\\d+(?:\\.\\d+)?')
+      .replace(/\{word\}/g, '\\S+')
+      .replace(/\{\}/g, '.+');
 
     try {
       const regex = new RegExp(`^${regexStr}$`, 'i');

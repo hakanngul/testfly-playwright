@@ -1,3 +1,6 @@
+import { createRequire } from 'node:module';
+import { join } from 'node:path';
+
 /**
  * TestFly error model (ADR-001 D7: honesty principle).
  *
@@ -11,6 +14,8 @@ export type TestFlyErrorCode =
   // configuration
   | 'TF_CONFIG_INVALID'
   | 'TF_CONFIG_MISSING'
+  | 'TF_CONTEXT_KEY_MISSING'
+  | 'TF_DATA_FILE_INVALID'
   // optional dependencies / modules
   | 'TF_OPTIONAL_DEPENDENCY_MISSING'
   | 'TF_FEATURE_DISABLED'
@@ -31,6 +36,8 @@ export type TestFlyErrorCode =
   | 'TF_MAIL_NOT_CONFIGURED'
   | 'TF_MAIL_TIMEOUT'
   | 'TF_MAIL_PROVIDER_ERROR'
+  // mock
+  | 'TF_MOCK_ASSERTION_FAILED'
   // session / auth
   | 'TF_SESSION_PROVIDER_MISSING'
   | 'TF_SESSION_SETUP_FAILED'
@@ -40,6 +47,10 @@ export type TestFlyErrorCode =
   | 'TF_AI_PROVIDER_ERROR'
   | 'TF_AI_INVALID_RESPONSE'
   | 'TF_AI_ASSERTION_FAILED'
+  | 'TF_AI_ACTION_FAILED'
+  // quality fixtures
+  | 'TF_QUALITY_ASSERTION_FAILED'
+  | 'TF_QUALITY_UNSUPPORTED'
   // reporter / quality gates
   | 'TF_QUARANTINE_INVALID'
   | 'TF_QUALITY_GATE_FAILED'
@@ -93,7 +104,7 @@ export async function importOptional<T = any>(moduleName: string, feature: strin
     // Resolve from the consumer's project first so pnpm strict layouts work.
     let resolved = moduleName;
     try {
-      resolved = require.resolve(moduleName, { paths: [process.cwd()] });
+      resolved = createRequire(join(process.cwd(), 'noop.js')).resolve(moduleName);
     } catch {
       /* fall back to normal resolution */
     }

@@ -1,36 +1,51 @@
-import type { APIResponse } from '@playwright/test';
+import type { ZodType } from 'zod';
+import type { ApiOptions } from '../../core/config/schema';
 
+/** Resolved retry policy. @public */
+export type RetryPolicy = ApiOptions['retry'];
+
+/** Per-request options. @public */
 export interface ApiRequestOptions {
+  /** Query-string parameters. */
+  params?: Record<string, string | number | boolean | undefined>;
   headers?: Record<string, string>;
-  params?: Record<string, string | number | boolean>;
+  /** Raw body (string/Buffer are sent as-is, objects are JSON encoded). */
   data?: unknown;
+  /** JSON body; sets `content-type: application/json`. */
+  json?: unknown;
+  /** `application/x-www-form-urlencoded` body. */
   form?: Record<string, string | number | boolean>;
-  multipart?: any;
+  /** `multipart/form-data` body (passed to Playwright). */
+  multipart?: Record<string, string | number | boolean | { name: string; mimeType: string; buffer: Buffer }>;
+  /** Timeout in ms for one attempt. */
   timeout?: number;
-  failOnStatusCode?: boolean;
-  ignoreHTTPSErrors?: boolean;
+  /** Override the client retry policy for this request. */
+  retry?: Partial<RetryPolicy>;
+  /** Throw `TF_API_REQUEST_FAILED` on non-2xx responses (default false). */
+  failOnStatus?: boolean;
 }
 
-export interface ApiResponse<T = any> {
-  status: number;
-  statusText: string;
-  ok: boolean;
-  headers: Record<string, string>;
-  data: T;
-  raw: APIResponse;
-  duration: number;
-  responseTimeMs: number;
-  text: () => Promise<string>;
-  json: <R = T>() => Promise<R>;
-  body: () => Promise<Buffer>;
+/** @public */
+export interface GraphqlOptions extends ApiRequestOptions {
+  /** GraphQL endpoint path (default `/graphql`). */
+  endpoint?: string;
+  operationName?: string;
 }
 
-export interface ApiAuthManager {
-  setToken: (token: string) => void;
-  setBearerToken: (token: string) => void;
-  setBasicAuth: (username: string, password: string) => void;
-  setApiKey: (name: string, value: string, inHeader?: boolean) => void;
-  clear: () => void;
-  getToken: () => string | null;
-  getHeaders: () => Record<string, string>;
+/** Options accepted by `ApiClient.fetch`. @public */
+export interface ApiFetchOptions extends ApiRequestOptions {
+  method?: string;
 }
+
+/** Options for `ApiClient.pollUntil`. @public */
+export interface PollOptions {
+  /** Total time budget in ms (default 10000). */
+  timeout?: number;
+  /** Delay between attempts in ms (default 500). */
+  interval?: number;
+  /** Stop immediately (throw) when this returns true for a response. */
+  failFastOn?: (res: import('./response').ApiResponse) => boolean;
+}
+
+/** Anything with a zod-like `safeParse`. @public */
+export type SchemaLike<T> = Pick<ZodType<T>, 'safeParse'>;

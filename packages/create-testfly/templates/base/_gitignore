@@ -1,0 +1,10 @@
+# TestFly / Playwright
+node_modules/
+test-results/
+playwright-report/
+.features-gen/
+.testfly/history/
+.testfly/report/
+.testfly/sessions/
+.env
+.env.local

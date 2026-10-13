@@ -1,0 +1,9 @@
+# Page "todo": keys are used as locate('todo.<name>').
+# Selector fields: role (+name), label, text, testid, placeholder, css, xpath. Add "fallbacks:" for self-healing.
+new_todo:
+  placeholder: What needs to be done?
+  fallbacks:
+    - css: ".new-todo"
+
+items:
+  css: ".todo-list li label"

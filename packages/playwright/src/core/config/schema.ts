@@ -150,6 +150,11 @@ export const TestFlyOptionsSchema = z.object({
   ai: AiOptionsSchema.prefault({}),
   bdd: BddOptionsSchema.optional(),
   reporter: ReporterOptionsSchema.prefault({}),
+  /**
+   * Named overrides applied when `env` (or `TESTFLY_ENV`) matches the key, e.g.
+   * `profiles: { ci: { ai: { mode: 'replay' } } }`. Deep-merged over the root options.
+   */
+  profiles: z.record(z.string(), z.record(z.string(), z.unknown())).optional(),
   /** User-defined values available as `testfly.custom`. */
   custom: z.record(z.string(), z.unknown()).default({}),
 });

@@ -1,3 +1,4 @@
+/** Payload of a run notification. @internal */
 export interface NotificationPayload {
   title: string;
   status: 'passed' | 'failed' | 'running';
@@ -8,6 +9,7 @@ export interface NotificationPayload {
   reportUrl?: string;
 }
 
+/** Posts run summaries to chat webhooks. @internal */
 export class NotificationManager {
   /**
    * Send notification to Slack incoming webhook
@@ -15,19 +17,19 @@ export class NotificationManager {
   static async sendSlack(webhookUrl: string, payload: NotificationPayload): Promise<boolean> {
     const isPassed = payload.status === 'passed';
     const color = isPassed ? '#36a64f' : '#e01e5a';
-    const statusEmoji = isPassed ? '✅' : '❌';
+    const statusLabel = isPassed ? 'PASSED' : 'FAILED';
 
     const body = {
       attachments: [
         {
           color,
-          title: `${statusEmoji} TestFly Suite: ${payload.title}`,
-          text: `Durum: *${payload.status.toUpperCase()}* | Süre: *${payload.duration || 'N/A'}*\nToplam: *${payload.totalTests || 0}* | Başarılı: *${payload.passedTests || 0}* | Hatalı: *${payload.failedTests || 0}*`,
+          title: `[${statusLabel}] TestFly Suite: ${payload.title}`,
+          text: `Status: *${payload.status.toUpperCase()}* | Duration: *${payload.duration || 'N/A'}*\nTotal: *${payload.totalTests || 0}* | Passed: *${payload.passedTests || 0}* | Failed: *${payload.failedTests || 0}*`,
           actions: payload.reportUrl
             ? [
                 {
                   type: 'button',
-                  text: '📊 Raporu Görüntüle',
+                  text: 'View report',
                   url: payload.reportUrl,
                   style: isPassed ? 'primary' : 'danger',
                 },
@@ -50,14 +52,14 @@ export class NotificationManager {
     const body = {
       embeds: [
         {
-          title: `${isPassed ? '✅' : '❌'} TestFly Run: ${payload.title}`,
+          title: `[${isPassed ? 'PASSED' : 'FAILED'}] TestFly Run: ${payload.title}`,
           color,
           fields: [
-            { name: 'Durum', value: payload.status.toUpperCase(), inline: true },
-            { name: 'Süre', value: payload.duration || 'N/A', inline: true },
+            { name: 'Status', value: payload.status.toUpperCase(), inline: true },
+            { name: 'Duration', value: payload.duration || 'N/A', inline: true },
             {
-              name: 'Sonuçlar',
-              value: `Toplam: ${payload.totalTests || 0} | Başarılı: ${payload.passedTests || 0} | Hatalı: ${payload.failedTests || 0}`,
+              name: 'Results',
+              value: `Total: ${payload.totalTests || 0} | Passed: ${payload.passedTests || 0} | Failed: ${payload.failedTests || 0}`,
               inline: false,
             },
           ],
@@ -83,18 +85,18 @@ export class NotificationManager {
       summary: `TestFly: ${payload.title}`,
       sections: [
         {
-          activityTitle: `${isPassed ? '✅' : '❌'} TestFly Suite: ${payload.title}`,
-          activitySubtitle: `Durum: ${payload.status.toUpperCase()} (${payload.duration || 'N/A'})`,
+          activityTitle: `[${isPassed ? 'PASSED' : 'FAILED'}] TestFly Suite: ${payload.title}`,
+          activitySubtitle: `Status: ${payload.status.toUpperCase()} (${payload.duration || 'N/A'})`,
           facts: [
-            { name: 'Toplam Test', value: String(payload.totalTests || 0) },
-            { name: 'Başarılı', value: String(payload.passedTests || 0) },
-            { name: 'Hatalı', value: String(payload.failedTests || 0) },
+            { name: 'Total tests', value: String(payload.totalTests || 0) },
+            { name: 'Passed', value: String(payload.passedTests || 0) },
+            { name: 'Failed', value: String(payload.failedTests || 0) },
           ],
           potentialAction: payload.reportUrl
             ? [
                 {
                   '@type': 'OpenUri',
-                  name: '📊 Raporu Aç',
+                  name: 'Open report',
                   targets: [{ os: 'default', uri: payload.reportUrl }],
                 },
               ]

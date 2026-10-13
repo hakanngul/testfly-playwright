@@ -1,71 +1,67 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import { OpenApiGenerator } from './generator/OpenApiGenerator';
+import { log, warn } from './util';
 
-
+/** Options of `testfly generate`. @internal */
 export interface GenerateOptions {
   swagger?: string;
   outputDir?: string;
   cwd?: string;
 }
 
-export async function runGenerate(options: GenerateOptions = {}): Promise<void> {
-  const targetDir = options.cwd || process.cwd();
+/** Generate BDD features and generic API steps from an OpenAPI document. Returns the exit code. @internal */
+export async function runGenerate(options: GenerateOptions = {}): Promise<number> {
+  const cwd = options.cwd ?? process.cwd();
   const source = options.swagger;
-
   if (!source) {
-    console.error(`\n❌ Hata: Lütfen bir Swagger / OpenAPI dosya yolu veya URL belirtin.`);
-    console.log(`Örnek: npx testfly generate --swagger ./swagger.json`);
-    console.log(`       npx testfly generate --swagger https://petstore.swagger.io/v2/swagger.json\n`);
-    return;
+    warn('Provide an OpenAPI/Swagger file or URL: testfly generate --swagger ./openapi.json');
+    return 2;
   }
 
-  console.log(`\n🔍 Loading Swagger/OpenAPI specification from: ${source}...`);
-
-  let specObj: any = null;
-
+  let spec: Record<string, unknown>;
   try {
-    if (source.startsWith('http://') || source.startsWith('https://')) {
+    if (/^https?:\/\//.test(source)) {
       const res = await fetch(source);
-      specObj = await res.json();
+      if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+      spec = (await res.json()) as Record<string, unknown>;
     } else {
-      const filePath = path.resolve(targetDir, source);
-      if (!fs.existsSync(filePath)) {
-        console.error(`❌ Dosya bulunamadı: ${filePath}`);
-        return;
+      const file = path.resolve(cwd, source);
+      if (!fs.existsSync(file)) {
+        warn(`File not found: ${file}`);
+        return 1;
       }
-      const raw = fs.readFileSync(filePath, 'utf8');
-      specObj = JSON.parse(raw);
+      const raw = fs.readFileSync(file, 'utf8');
+      if (/\.ya?ml$/i.test(file)) {
+        const YAML = await import('yaml');
+        spec = YAML.parse(raw) as Record<string, unknown>;
+      } else {
+        spec = JSON.parse(raw) as Record<string, unknown>;
+      }
     }
-  } catch (err: any) {
-    console.error(`❌ Swagger spesifikasyonu okunamadı:`, err.message || err);
-    return;
+  } catch (error) {
+    warn(`Could not read the OpenAPI document: ${error instanceof Error ? error.message : String(error)}`);
+    return 1;
   }
 
-  const featuresDir = path.resolve(targetDir, options.outputDir || 'features');
-  const stepsDir = path.resolve(targetDir, 'steps');
+  const featuresDir = path.resolve(cwd, options.outputDir ?? 'features');
+  const stepsDir = path.resolve(cwd, 'steps');
+  fs.mkdirSync(featuresDir, { recursive: true });
+  fs.mkdirSync(stepsDir, { recursive: true });
 
-  if (!fs.existsSync(featuresDir)) fs.mkdirSync(featuresDir, { recursive: true });
-  if (!fs.existsSync(stepsDir)) fs.mkdirSync(stepsDir, { recursive: true });
-
-  const generatedFeatures = OpenApiGenerator.generateFeatures(specObj);
-
-  console.log(`\n✨ Generated ${generatedFeatures.length} BDD feature file(s):`);
-
-  for (const item of generatedFeatures) {
-    const fullPath = path.join(featuresDir, item.fileName);
-    fs.writeFileSync(fullPath, item.content, 'utf8');
-    console.log(`  📄 Created feature: ${path.relative(targetDir, fullPath)}`);
+  const features = OpenApiGenerator.generateFeatures(spec);
+  log(`Generated ${features.length} feature file(s):`);
+  for (const feature of features) {
+    const file = path.join(featuresDir, feature.fileName);
+    fs.writeFileSync(file, feature.content, 'utf8');
+    log(`  ${path.relative(cwd, file)}`);
   }
 
-  // Create steps definition if not exists
-  const stepsPath = path.join(stepsDir, 'api-generated.steps.ts');
-  if (!fs.existsSync(stepsPath)) {
-    fs.writeFileSync(stepsPath, OpenApiGenerator.generateApiSteps(), 'utf8');
-    console.log(`  📄 Created step definitions: ${path.relative(targetDir, stepsPath)}`);
+  const stepsFile = path.join(stepsDir, 'api-generated.steps.ts');
+  if (!fs.existsSync(stepsFile)) {
+    fs.writeFileSync(stepsFile, OpenApiGenerator.generateApiSteps(), 'utf8');
+    log(`  ${path.relative(cwd, stepsFile)}`);
   }
-
-  console.log(`\n🎉 Swagger to BDD generation completed successfully!`);
-  console.log(`Testlerinizi çalıştırmak için:`);
-  console.log(`  npx testfly test --grep @api\n`);
+  log('\nRun them with: npx testfly test --grep @api');
+  return 0;
 }

@@ -1,133 +1,152 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { Command } from 'commander';
-import { runInit } from './init';
-import { runReport } from './report';
-import { runTestCommand } from './test';
-import { runClean } from './clean';
-import { runGenerate } from './generate';
-import { runCi } from './ci';
-import { runDoctor } from './doctor';
-import { runStepsCommand } from './steps';
-import { runMobileCommand } from './mobile';
-import { runLocatorsCommand } from './locators';
 
+function readVersion(): string {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8')) as { version?: string };
+    return pkg.version ?? '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
+}
+
+/** Set the process exit code from a command result (non-zero only). */
+function finish(code: number | void): void {
+  if (typeof code === 'number' && code !== 0) process.exitCode = code;
+}
+
+const toInt = (value: string): number => Number.parseInt(value, 10);
+
+/**
+ * Build the `testfly` command line. Command implementations are loaded lazily so that
+ * `testfly --help` stays fast.
+ *
+ * @internal
+ */
 export function createCli(): Command {
   const program = new Command();
-
-  program
-    .name('testfly')
-    .description('TestFly Playwright — Zero-boilerplate BDD & test automation framework')
-    .version('0.1.0');
+  program.name('testfly').description('TestFly for Playwright: BDD, typed locators, self-healing and stability analytics').version(readVersion());
 
   program
     .command('init')
-    .description('Initialize a new TestFly Playwright project with BDD, fixtures, and config')
-    .option('-f, --force', 'Overwrite existing template files')
-    .action(async (options) => {
-      await runInit({ force: options.force });
+    .description('Scaffold config, example tests, locators and .gitignore entries in the current directory')
+    .option('-f, --force', 'overwrite existing files')
+    .option('--no-bdd', 'skip the BDD example (features/steps)')
+    .action(async (options: { force?: boolean; bdd?: boolean }) => {
+      const { runInit } = await import('./init');
+      await runInit({ force: options.force, bdd: options.bdd });
     });
 
   program
     .command('doctor')
-    .description('Diagnose project health, configuration, browsers, mobile devices, and BDD step mappings')
+    .description('Diagnose the project: Node, Playwright, config, locators and BDD steps')
     .action(async () => {
-      await runDoctor();
+      const { runDoctor } = await import('./doctor');
+      finish(await runDoctor());
     });
 
   program
     .command('locators')
-    .description('Generate TypeScript type definitions from YAML/JSON locator repository')
-    .option('-d, --dir <dir>', 'Locators directory (default: locators)')
-    .option('-o, --output <file>', 'Output TypeScript declaration file (default: locators/index.d.ts)')
-    .action(async (options) => {
-      await runLocatorsCommand(options);
+    .description('Generate typed locator keys (locators/index.d.ts) from the YAML catalog')
+    .option('-d, --dir <dir>', 'locators directory', 'locators')
+    .option('-o, --output <file>', 'output .d.ts file')
+    .action(async (options: { dir?: string; output?: string }) => {
+      const { runLocatorsCommand } = await import('./locators');
+      finish(await runLocatorsCommand(options));
     });
-
-  program
-    .command('mobile [action]')
-    .description('Manage and inspect mobile devices, emulators, and simulators (devices)')
-    .option('-a, --all', 'List all available simulators/emulators (including shutdown)')
-    .action(async (action, options) => {
-      await runMobileCommand(action || 'devices', options);
-    });
-
 
   program
     .command('steps')
-    .description('Audit unmapped BDD steps and auto-generate TypeScript definitions')
-    .option('-s, --scaffold', 'Auto-generate missing step definitions to steps/unmapped.steps.ts')
-    .option('-f, --features <dir>', 'Custom features directory')
-    .option('-t, --steps <dir>', 'Custom steps directory')
-    .action(async (options) => {
-      await runStepsCommand(options);
-    });
-
-
-  program
-    .command('clean')
-    .description('Clean all generated reports, test results, and BDD artifacts (like mvn clean)')
-    .action(async () => {
-      await runClean();
+    .description('Find feature steps without a step definition')
+    .option('-s, --scaffold', 'write stubs to steps/unmapped.steps.ts')
+    .option('-f, --features <dir>', 'features directory', 'features')
+    .option('-t, --steps <dir>', 'steps directory', 'steps')
+    .action(async (options: { scaffold?: boolean; features?: string; steps?: string }) => {
+      const { runStepsCommand } = await import('./steps');
+      finish(await runStepsCommand(options));
     });
 
   program
     .command('generate')
-    .description('Generate BDD features and steps from OpenAPI / Swagger spec')
-    .option('-s, --swagger <pathOrUrl>', 'Swagger / OpenAPI JSON/YAML file path or URL')
-    .option('-o, --output-dir <dir>', 'Output directory for feature files (default: features)')
-    .action(async (options) => {
-      await runGenerate(options);
+    .description('Generate BDD features and API steps from an OpenAPI/Swagger document')
+    .option('-s, --swagger <pathOrUrl>', 'OpenAPI JSON/YAML file or URL')
+    .option('-o, --output-dir <dir>', 'feature output directory', 'features')
+    .action(async (options: { swagger?: string; outputDir?: string }) => {
+      const { runGenerate } = await import('./generate');
+      finish(await runGenerate(options));
     });
 
   program
-    .command('ci [provider]')
-    .description('Generate CI/CD pipeline template (github, gitlab)')
-    .option('-f, --force', 'Overwrite existing pipeline configuration')
-    .action(async (provider, options) => {
-      await runCi({ provider, force: options.force });
+    .command('clean')
+    .description('Remove generated artifacts (.features-gen, test-results, reports)')
+    .option('--all', 'also remove run history (.testfly/history)')
+    .action(async (options: { all?: boolean }) => {
+      const { runClean } = await import('./clean');
+      await runClean(options);
     });
 
   program
-    .command('test')
-    .description('Run BDD and Playwright tests')
-    .option('--clean', 'Clean test results and reports before running tests')
-    .option('--ui', 'Open Playwright interactive UI mode')
-    .option('--headed', 'Run browser in headed mode')
-    .option('-p, --project <name>', 'Filter by project name (e.g. bdd-tests, spec-tests)')
-    .option('-g, --grep <pattern>', 'Filter tests by tag or title pattern (e.g. @smoke)')
-    .option('-t, --tags <pattern>', 'Alias for --grep (filter by Cucumber tags)')
-    .option('-r, --reporter <name>', 'Playwright reporter to use')
-    .option('-c, --config <path>', 'Custom playwright config path')
-    .option('-w, --workers <count>', 'Number of concurrent workers')
-    .action(async (options) => {
-      await runTestCommand(options);
+    .command('test [playwrightArgs...]')
+    .description('Generate BDD tests (if used) and run Playwright. Extra arguments are passed to `playwright test`.')
+    .allowUnknownOption()
+    .option('--clean', 'clean artifacts first')
+    .option('--ui', 'Playwright UI mode')
+    .option('--headed', 'run browsers headed')
+    .option('-p, --project <name>', 'project name')
+    .option('-g, --grep <pattern>', 'only tests matching the pattern (e.g. @smoke)')
+    .option('-r, --reporter <name>', 'reporter override')
+    .option('-c, --config <path>', 'Playwright config path')
+    .option('-w, --workers <count>', 'number of workers')
+    .option('--no-bdd', 'skip BDD generation')
+    .action(async (playwrightArgs: string[], options: Record<string, string | boolean | undefined>) => {
+      const { runTestCommand } = await import('./test');
+      finish(await runTestCommand({ ...options, passthrough: playwrightArgs }));
+    });
+
+  program
+    .command('shard')
+    .description('Print the test files of one duration-balanced shard (uses run history)')
+    .requiredOption('--total <n>', 'total number of shards', toInt)
+    .requiredOption('--index <i>', 'shard index, 1-based', toInt)
+    .option('--history <dir>', 'history directory', '.testfly/history')
+    .option('--format <format>', 'files | json', 'files')
+    .option('-c, --config <path>', 'Playwright config path')
+    .action(async (options: { total: number; index: number; history?: string; format?: string; config?: string }) => {
+      const { runShard } = await import('./shard');
+      const format = options.format === 'json' ? 'json' : 'files';
+      finish(await runShard({ total: options.total, index: options.index, history: options.history, format, config: options.config }));
+    });
+
+  const quarantine = program.command('quarantine').description('Inspect the quarantine list');
+  quarantine
+    .command('list')
+    .description('List active and expired quarantine entries')
+    .option('-f, --file <file>', 'quarantine file', 'testfly-quarantine.yml')
+    .action(async (options: { file?: string }) => {
+      const { runQuarantineList } = await import('./quarantine');
+      finish(await runQuarantineList(options));
     });
 
   program
     .command('report [type]')
-    .description('Open or serve test reports (Playwright, Allure, Cucumber)')
-    .option('-a, --allure', 'Open / serve Allure report dashboard')
-    .option('-c, --cucumber', 'Open Cucumber HTML report')
-    .option('-g, --generate', 'Generate static Allure report instead of live server')
-    .option('-p, --port <port>', 'Port number for report server')
-    .option('-o, --output-dir <dir>', 'Custom output directory of report results')
-    .action(async (type, options) => {
-      await runReport(type, options);
+    .description('Open the TestFly dashboard (default) or the Playwright HTML report ("html")')
+    .option('-o, --output-dir <dir>', 'TestFly reporter output directory', '.testfly')
+    .action(async (type: string | undefined, options: { outputDir?: string }) => {
+      const { runReport } = await import('./report');
+      finish(await runReport(type, options));
+    });
+
+  program
+    .command('ci [provider]')
+    .description('Write a CI pipeline (github | gitlab)')
+    .option('-f, --force', 'overwrite an existing pipeline file')
+    .option('--pm <manager>', 'npm | pnpm | yarn (default: detected)')
+    .option('--shards <n>', 'number of shards (GitHub only)', toInt)
+    .action(async (provider: string | undefined, options: { force?: boolean; pm?: 'npm' | 'pnpm' | 'yarn'; shards?: number }) => {
+      const { runCi } = await import('./ci');
+      finish(await runCi({ provider, ...options }));
     });
 
   return program;
 }
-
-export * from './init';
-export * from './report';
-export * from './test';
-export * from './clean';
-export * from './generate';
-export * from './ci';
-export * from './doctor';
-export * from './steps';
-export * from './mobile';
-export * from './locators';
-
-
-
-

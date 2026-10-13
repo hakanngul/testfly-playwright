@@ -1,3 +1,4 @@
+/** Normalized OpenAPI operation. @internal */
 export interface OpenApiEndpoint {
   path: string;
   method: string;
@@ -9,12 +10,14 @@ export interface OpenApiEndpoint {
   responses: Record<string, any>;
 }
 
+/** A generated feature file. @internal */
 export interface GeneratedFeatureResult {
   tag: string;
   fileName: string;
   content: string;
 }
 
+/** Generates BDD features from OpenAPI documents. @internal */
 export class OpenApiGenerator {
   /**
    * Parse an OpenAPI/Swagger JSON or object and generate Gherkin feature scenarios
@@ -54,24 +57,20 @@ export class OpenApiGenerator {
     const results: GeneratedFeatureResult[] = [];
 
     for (const [tag, endpoints] of endpointsByTag.entries()) {
-      const featureTitle = `API - ${tag.toUpperCase()} Servis Testleri`;
+      const featureTitle = `API - ${tag.toUpperCase()} service tests`;
       let featureContent = `@api @${tag}\nFeature: ${featureTitle}\n\n`;
 
       for (const ep of endpoints) {
         const expectedStatus = Object.keys(ep.responses)[0] || '200';
         const scenarioTitle = `${ep.method} ${ep.path} - ${ep.summary}`;
+        const sends = ['POST', 'PUT', 'PATCH'].includes(ep.method);
 
         featureContent += `  Scenario: ${scenarioTitle}\n`;
-        featureContent += `    Given API istemcisi hazır\n`;
-
-        if (['POST', 'PUT', 'PATCH'].includes(ep.method)) {
-          featureContent += `    When "${ep.method}" metoduyla "${ep.path}" endpointine veri gönderilir\n`;
-        } else {
-          featureContent += `    When "${ep.method}" metoduyla "${ep.path}" endpointi çağrılır\n`;
-        }
-
-        featureContent += `    Then API yanıt kodu ${expectedStatus} olmalıdır\n`;
-        featureContent += `    And yanıt gövdesi geçerli bir nesne içermelidir\n\n`;
+        featureContent += sends
+          ? `    When I send a "${ep.method}" request with a body to "${ep.path}"\n`
+          : `    When I send a "${ep.method}" request to "${ep.path}"\n`;
+        featureContent += `    Then the response status is ${expectedStatus}\n`;
+        featureContent += `    And the response body is not empty\n\n`;
       }
 
       results.push({
@@ -88,36 +87,22 @@ export class OpenApiGenerator {
    * Generate generic BDD steps template for API requests
    */
   static generateApiSteps(): string {
-    return `import { Given, When, Then, expect } from '@testfly/playwright';
+    return `import { When, Then, expect } from '@testfly/playwright/bdd';
 
-let lastResponse: any = null;
-
-Given('API istemcisi hazır', async ({ api, step }) => {
-  await step.info('API istemcisi yapılandırıldı');
-  expect(api).toBeDefined();
+When('I send a {string} request to {string}', async ({ api, ctx }, method: string, path: string) => {
+  ctx.set('response', await api.fetch(path, { method }));
 });
 
-When('{string} metoduyla {string} endpointi çağrılır', async ({ api, step }, method: string, path: string) => {
-  await step.info(\`\${method} isteği gönderiliyor: \${path}\`);
-  lastResponse = await (api as any)[method.toLowerCase()](path);
+When('I send a {string} request with a body to {string}', async ({ api, ctx }, method: string, path: string) => {
+  ctx.set('response', await api.fetch(path, { method, json: { name: 'TestFly entity', createdAt: new Date().toISOString() } }));
 });
 
-When('{string} metoduyla {string} endpointine veri gönderilir', async ({ api, step }, method: string, path: string) => {
-  await step.info(\`\${method} isteği gönderiliyor: \${path}\`);
-  lastResponse = await (api as any)[method.toLowerCase()](path, {
-    name: 'Testfly Entity',
-    createdAt: new Date().toISOString()
-  });
+Then('the response status is {int}', async ({ ctx }, expected: number) => {
+  expect(ctx.require<{ status: number }>('response').status).toBe(expected);
 });
 
-Then('API yanıt kodu {int} olmalıdır', async ({ step }, expectedStatus: number) => {
-  await step.info(\`Yanıt kodu kontrol ediliyor. Beklenen: \${expectedStatus}, Gelen: \${lastResponse.status}\`);
-  expect(lastResponse.status).toBe(expectedStatus);
-});
-
-Then('yanıt gövdesi geçerli bir nesne içermelidir', async ({ step }) => {
-  await step.info('Yanıt veri içeriği kontrol ediliyor');
-  expect(lastResponse.data).toBeDefined();
+Then('the response body is not empty', async ({ ctx }) => {
+  expect(ctx.require<{ data: unknown }>('response').data).toBeTruthy();
 });
 `;
   }

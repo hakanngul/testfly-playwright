@@ -1,116 +1,57 @@
-import { spawn, execSync } from 'child_process';
-import path from 'path';
-import fs from 'fs';
+import fs from 'node:fs';
+import path from 'node:path';
+import { spawn } from 'node:child_process';
+import { findPlaywrightConfig, log, playwrightCli, runNode, warn } from './util';
 
+/** Options of `testfly report`. @internal */
 export interface ReportOptions {
-  allure?: boolean;
-  cucumber?: boolean;
-  generate?: boolean;
-  port?: string;
+  cwd?: string;
+  /** Output directory of the TestFly reporter. Default `.testfly`. */
   outputDir?: string;
 }
 
-function openBrowserUrl(targetPathOrUrl: string): void {
-  const isUrl = targetPathOrUrl.startsWith('http://') || targetPathOrUrl.startsWith('https://');
-  const fullTarget = isUrl ? targetPathOrUrl : path.resolve(process.cwd(), targetPathOrUrl);
-
-  const startCmd =
-    process.platform === 'darwin'
-      ? 'open'
-      : process.platform === 'win32'
-      ? 'start'
-      : 'xdg-open';
-
+function openFile(file: string): void {
+  const [command, args]: [string, string[]] =
+    process.platform === 'darwin' ? ['open', [file]] : process.platform === 'win32' ? ['cmd', ['/c', 'start', '', file]] : ['xdg-open', [file]];
   try {
-    execSync(`${startCmd} "${fullTarget}"`, { stdio: 'ignore' });
+    const child = spawn(command, args, { stdio: 'ignore', detached: true });
+    child.on('error', () => log(`Open this file in your browser: ${file}`));
+    child.unref();
   } catch {
-    console.log(`\n  👉 Raporu tarayıcınızda açın: ${fullTarget}\n`);
+    log(`Open this file in your browser: ${file}`);
   }
 }
 
-function findExistingPath(...candidates: string[]): string | null {
-  for (const c of candidates) {
-    const full = path.resolve(process.cwd(), c);
-    if (fs.existsSync(full)) {
-      return full;
+/**
+ * `testfly report [type]`: `testfly` (default) opens the dashboard written by @testfly/reporter,
+ * `html` opens the Playwright HTML report.
+ * @internal
+ */
+export async function runReport(type: string | undefined, options: ReportOptions = {}): Promise<number> {
+  const cwd = options.cwd ?? process.cwd();
+  const kind = type ?? 'testfly';
+
+  if (kind === 'html' || kind === 'playwright') {
+    const dir = path.resolve(cwd, 'playwright-report');
+    if (!fs.existsSync(dir)) {
+      warn('playwright-report/ not found. Run `testfly test` first.');
+      return 1;
     }
-  }
-  return null;
-}
-
-export async function runReport(type: string | undefined, options: ReportOptions = {}): Promise<void> {
-  const isAllure = options.allure || type === 'allure';
-  const isCucumber = options.cucumber || type === 'cucumber';
-
-  // 1. Allure Report
-  if (isAllure) {
-    const resolvedDir = options.outputDir
-      ? path.resolve(process.cwd(), options.outputDir)
-      : findExistingPath('reports/allure-results', 'allure-results');
-
-    if (!resolvedDir || !fs.existsSync(resolvedDir)) {
-      console.warn(`\n⚠️  Allure sonuç dizini bulunamadı (reports/allure-results veya allure-results)`);
-      console.warn(`Lütfen önce testlerinizi çalıştırın: npx testfly test\n`);
-      return;
-    }
-
-    if (options.generate) {
-      const targetReportDir = path.resolve(process.cwd(), 'reports/allure-report');
-      console.log(`\n📊 Generating Allure static report to: ${targetReportDir}...`);
-      execSync(`npx allure generate "${resolvedDir}" --clean -o "${targetReportDir}"`, { stdio: 'inherit' });
-      console.log(`✨ Allure raporu başarıyla oluşturuldu: ${targetReportDir}`);
-      openBrowserUrl(path.join(targetReportDir, 'index.html'));
-      return;
-    }
-
-    console.log(`\n🚀 Starting Allure Report server from: ${resolvedDir}...`);
-    const portArg = options.port ? ` -p ${options.port}` : '';
-    const child = spawn(`npx allure serve "${resolvedDir}"${portArg}`, {
-      shell: true,
-      stdio: 'inherit',
-    });
-
-    child.on('error', (err) => {
-      console.error('Allure server başlatılamadı:', err);
-    });
-    return;
+    return runNode(playwrightCli(cwd), ['show-report', dir], { cwd });
   }
 
-  // 2. Cucumber HTML Report
-  if (isCucumber) {
-    const resolvedPath = options.outputDir
-      ? path.resolve(process.cwd(), options.outputDir)
-      : findExistingPath('reports/cucumber/index.html', 'cucumber-report/index.html');
-
-    if (!resolvedPath || !fs.existsSync(resolvedPath)) {
-      console.warn(`\n⚠️  Cucumber HTML raporu bulunamadı (reports/cucumber/index.html veya cucumber-report/index.html)`);
-      console.warn(`Lütfen önce testlerinizi çalıştırın: npx testfly test\n`);
-      return;
-    }
-
-    console.log(`\n🥒 Opening Cucumber HTML Report: ${resolvedPath}...`);
-    openBrowserUrl(resolvedPath);
-    return;
+  if (kind !== 'testfly') {
+    warn(`Unknown report type "${kind}". Use "testfly" or "html".`);
+    return 1;
   }
 
-  // 3. Playwright Default HTML Report
-  const resolvedPwDir = options.outputDir
-    ? path.resolve(process.cwd(), options.outputDir)
-    : findExistingPath('reports/playwright', 'playwright-report');
-
-  if (!resolvedPwDir || !fs.existsSync(resolvedPwDir)) {
-    console.warn(`\n⚠️  Playwright rapor dizini bulunamadı (reports/playwright veya playwright-report)`);
-    console.warn(`Lütfen önce testlerinizi çalıştırın: npx testfly test\n`);
-    return;
+  const outputDir = options.outputDir ?? '.testfly';
+  const file = path.resolve(cwd, outputDir, 'report', 'index.html');
+  if (!fs.existsSync(file)) {
+    warn(`${path.relative(cwd, file)} not found. Run \`testfly test\` with the TestFly reporter enabled first${findPlaywrightConfig(cwd) ? '' : ' (no playwright config found)'}.`);
+    return 1;
   }
-
-  console.log(`\n🎭 Opening Playwright HTML Report: ${resolvedPwDir}...`);
-  const child = spawn(`npx playwright show-report "${resolvedPwDir}"`, {
-    shell: true,
-    stdio: 'inherit',
-  });
-
-  child.on('error', (err) => {
-    console.error('Playwright raporu açılamadı:', err);
-  });
+  log(`Opening ${path.relative(cwd, file)}`);
+  openFile(file);
+  return 0;
 }

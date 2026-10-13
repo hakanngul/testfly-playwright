@@ -1,1 +1,1 @@
-export * from './AuthManager';
+export * from './SessionManager';

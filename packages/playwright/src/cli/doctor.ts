@@ -1,41 +1,23 @@
 import { DoctorService } from './doctor/DoctorService';
+import { log } from './util';
 
-
+/** Options of `testfly doctor`. @internal */
 export interface DoctorOptions {
   cwd?: string;
 }
 
-export async function runDoctor(options: DoctorOptions = {}): Promise<void> {
-  const targetDir = options.cwd || process.cwd();
-  console.log(`\n🩺 TestFly Doctor — Proje & Ortam Teşhisi Başlatılıyor...\n`);
-
-  const checks = await DoctorService.diagnose(targetDir);
-
-  let hasErrors = false;
-  let hasWarnings = false;
-
+/** Print diagnostics. Returns exit code 1 when a check failed. @internal */
+export async function runDoctor(options: DoctorOptions = {}): Promise<number> {
+  const cwd = options.cwd ?? process.cwd();
+  log(`\nTestFly doctor (${cwd})\n`);
+  const checks = await DoctorService.diagnose(cwd);
+  const label = { pass: 'ok  ', warn: 'warn', fail: 'FAIL' } as const;
   for (const check of checks) {
-    let icon = '✅';
-    if (check.status === 'warn') {
-      icon = '⚠️ ';
-      hasWarnings = true;
-    } else if (check.status === 'fail') {
-      icon = '❌';
-      hasErrors = true;
-    }
-
-    console.log(`  ${icon} [${check.name}]: ${check.message}`);
-    if (check.solution) {
-      console.log(`     👉 Çözüm: ${check.solution}`);
-    }
+    log(`  [${label[check.status]}] ${check.name}: ${check.message}`);
+    if (check.solution && check.status !== 'pass') log(`         fix: ${check.solution}`);
   }
-
-  console.log(`\n------------------------------------------------------------`);
-  if (!hasErrors && !hasWarnings) {
-    console.log(`🎉 Tebrikler! TestFly ortamınız mükemmel durumda ve teste hazır.\n`);
-  } else if (!hasErrors && hasWarnings) {
-    console.log(`✨ Ortamınız çalışmaya hazır, ancak yukarıdaki uyarıları inceleyebilirsiniz.\n`);
-  } else {
-    console.log(`❌ Bazı kritik kontroller başarısız oldu. Lütfen yukarıdaki çözümleri uygulayın.\n`);
-  }
+  const failed = checks.some((c) => c.status === 'fail');
+  const warned = checks.some((c) => c.status === 'warn');
+  log(failed ? '\nSome checks failed.\n' : warned ? '\nReady, with warnings.\n' : '\nAll good.\n');
+  return failed ? 1 : 0;
 }

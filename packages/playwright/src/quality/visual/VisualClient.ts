@@ -1,5 +1,6 @@
 import { Page, Locator, expect } from '@playwright/test';
 
+/** Options for visual snapshots. @public */
 export interface VisualSnapshotOptions {
   mask?: (Locator | string)[];
   maxDiffPixels?: number;
@@ -10,6 +11,10 @@ export interface VisualSnapshotOptions {
   clip?: { x: number; y: number; width: number; height: number };
 }
 
+/**
+ * Screenshot comparison helpers. Exposed as the `visual` fixture.
+ * @public
+ */
 export class VisualClient {
   constructor(private page: Page) {}
 
@@ -26,9 +31,9 @@ export class VisualClient {
       mask: maskLocators,
       maxDiffPixels: options.maxDiffPixels,
       maxDiffPixelRatio: options.maxDiffPixelRatio,
-      threshold: options.threshold || 0.2,
+      threshold: options.threshold,
       fullPage: options.fullPage ?? false,
-      animations: options.animations || 'disabled',
+      animations: options.animations ?? 'disabled',
       clip: options.clip,
     });
   }
@@ -51,8 +56,8 @@ export class VisualClient {
       mask: maskLocators,
       maxDiffPixels: options.maxDiffPixels,
       maxDiffPixelRatio: options.maxDiffPixelRatio,
-      threshold: options.threshold || 0.2,
-      animations: options.animations || 'disabled',
+      threshold: options.threshold,
+      animations: options.animations ?? 'disabled',
     });
   }
 }

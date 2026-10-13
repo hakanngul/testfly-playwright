@@ -1,70 +1,69 @@
-// Core & BDD
-export * from './core';
-export { test, expect } from './fixtures';
-export type { TestFlyFixtures } from './fixtures';
+/**
+ * @testfly/playwright — public API.
+ *
+ * Entry points: `@testfly/playwright` (this file), `/bdd`, `/config`, `/locators`, `/db`, `/mail`.
+ */
 
-// Config
-export { defineTestFlyConfig, getTestFlyConfig, setTestFlyConfig, loadTestFlyConfigSync } from './core/config';
+// Test & fixtures
+export {
+  test,
+  expect,
+  mergeTests,
+  coreTest,
+  apiTest,
+  dataTest,
+  locatorTest,
+  qualityTest,
+  mockTest,
+  sessionTest,
+  quarantineTest,
+} from './fixtures';
 export type {
-  TestFlyConfig,
-  TestFlyConfigInput,
-  DatabaseConfigSchema,
-  MailConfigSchema,
-  AuthConfigSchema,
-  TimeoutsConfigSchema,
-  ReportingConfigSchema,
-  TestFlyConfigSchema,
-} from './core/config';
+  TestFlyFixtures,
+  CoreFixtures,
+  CoreWorkerFixtures,
+  ApiFixtures,
+  DataWorkerFixtures,
+  LocatorFixtures,
+  LocatorWorkerFixtures,
+  QualityFixtures,
+  MockFixtures,
+  SessionFixtures,
+} from './fixtures';
 
-// Clients & Engines
-export { ApiClient } from './clients/api/ApiClient';
-export type { ApiResponse, ApiRequestOptions, ApiAuthManager } from './clients/api/types';
-export { DbClient } from './clients/db/DbClient';
-export type { DbQueryResult, DbTableOperations } from './clients/db/types';
-export { RedisClient } from './clients/db/RedisClient';
-export type { RedisEntry } from './clients/db/RedisClient';
-export { MailClient } from './clients/mail/MailClient';
-export type { EmailMessage, WaitForEmailOptions } from './clients/mail/types';
-export { AuthManager } from './clients/auth/AuthManager';
-export { MockClient } from './clients/mock/MockClient';
-export type { MockResponseOptions, InterceptedRequest } from './clients/mock/MockClient';
-export { FakerClient } from './clients/faker/FakerClient';
-export { MobileClient } from './clients/mobile/MobileClient';
-export type { MobileLaunchOptions } from './clients/mobile/MobileClient';
-export { MobileScreen } from './clients/mobile/MobileScreen';
-export { MobileLocator } from './clients/mobile/MobileLocator';
-export type { MobileLocatorOptions, MobileRole } from './clients/mobile/MobileLocator';
-export { DeviceDetector } from './clients/mobile/DeviceDetector';
-export type { MobileDeviceItem } from './clients/mobile/DeviceDetector';
+// Sessions
+export { defineSession } from './clients/auth';
+export type { SessionApi, SessionSetup } from './clients/auth';
 
-// Context & State
-export { TestContext } from './core/context/TestContext';
-export { TestDataManager } from './core/context/TestDataManager';
-export { StepLogger } from './core/steps/StepLogger';
-export type { StepLogEntry } from './core/steps/StepLogger';
+// Errors
+export { TestFlyError, isTestFlyError } from './core/errors';
+export type { TestFlyErrorCode, TestFlyErrorOptions } from './core/errors';
 
-// Locators
-export { LocatorRegistry } from './locators/LocatorRegistry';
-export { LocatorParser } from './locators/LocatorParser';
-export { LocatorTypeGen } from './locators/LocatorTypeGen';
-export type { LocatorDef, SingleLocatorDef, PlatformLocatorDef, ParsedLocatorItem, TypedLocatorKey } from './locators/types';
+// Options (types only — use `defineConfig` from '@testfly/playwright/config')
+export type {
+  TestFlyOptions,
+  TestFlyOptionsInput,
+  AiOptions,
+  ApiOptions,
+  DbOptions,
+  MailOptions,
+  HealingOptions,
+  ReporterOptions,
+  SessionOptions,
+} from './core/config/schema';
 
-// Quality & Audits
-export { VisualClient } from './quality/visual/VisualClient';
-export type { VisualSnapshotOptions } from './quality/visual/VisualClient';
-export { A11yClient } from './quality/a11y/A11yClient';
-export type { A11yOptions } from './quality/a11y/A11yClient';
-export { PerformanceClient } from './quality/performance/PerformanceClient';
-export type { WebVitals } from './quality/performance/PerformanceClient';
-export { SmartForm, fillForm } from './quality/form/SmartForm';
-export type { SmartFormFieldMap } from './quality/form/SmartForm';
-
-// CLI & Tools
-export { DoctorService } from './cli/doctor/DoctorService';
-export type { DoctorCheckItem } from './cli/doctor/DoctorService';
-export { StepScanner } from './cli/scanner/StepScanner';
-export type { FeatureStepItem, UnmappedStepResult } from './cli/scanner/StepScanner';
-export { OpenApiGenerator } from './cli/generator/OpenApiGenerator';
-export type { OpenApiEndpoint, GeneratedFeatureResult } from './cli/generator/OpenApiGenerator';
-export { NotificationManager } from './cli/notifications/NotificationManager';
-export type { NotificationPayload } from './cli/notifications/NotificationManager';
+// Helpers handed to tests (types only)
+export { TestContext } from './core/context';
+export type { TypedContext, TestContextOptions } from './core/context';
+export type { StepApi, StepLevel } from './core/steps';
+export type { ApiClient } from './clients/api';
+export type { DbClient, RedisClient } from './clients/db';
+export type { MailClient } from './clients/mail';
+export type { MockClient } from './clients/mock';
+export type { FakerClient } from './clients/faker';
+export type { LocatorRegistry, TypedLocatorKey, LocateFn, HealingStrategy, HealContext, HealResult } from './locators';
+export { registerHealingStrategy } from './locators';
+export type { A11yClient, A11yOptions, AxeResults, AxeViolation } from './quality/a11y';
+export type { VisualClient, VisualSnapshotOptions } from './quality/visual';
+export type { PerformanceClient, WebVitals } from './quality/performance';
+export type { FormClient, SmartFormFieldMap } from './quality/form';

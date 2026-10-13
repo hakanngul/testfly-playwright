@@ -1,0 +1,165 @@
+import { isDeepStrictEqual } from 'node:util';
+import { TestFlyError } from '../../core/errors';
+import { queryJsonPath } from './jsonPath';
+import { truncate } from './curl';
+import type { SchemaLike } from './types';
+
+/** @internal */
+export interface ApiResponseInit {
+  status: number;
+  statusText: string;
+  headers: Record<string, string>;
+  body: Buffer;
+  durationMs: number;
+  request: { method: string; url: string };
+  truncateAt: number;
+}
+
+/**
+ * Response of an {@link ApiClient} call. The body is read eagerly, so all accessors are synchronous.
+ * Assertion helpers throw `TestFlyError` and return `this` for chaining.
+ *
+ * @public
+ */
+export class ApiResponse<T = any> {
+  readonly status: number;
+  readonly statusText: string;
+  readonly ok: boolean;
+  /** Response headers (lower-cased names). */
+  readonly headers: Record<string, string>;
+  /** Parsed JSON, or the raw text when the body is not JSON. */
+  readonly data: T;
+  readonly durationMs: number;
+  readonly request: { method: string; url: string };
+  private readonly rawText: string;
+  private readonly truncateAt: number;
+  private readonly rawBody: Buffer;
+
+  constructor(init: ApiResponseInit) {
+    this.status = init.status;
+    this.statusText = init.statusText;
+    this.ok = init.status >= 200 && init.status < 300;
+    this.headers = init.headers;
+    this.durationMs = init.durationMs;
+    this.request = init.request;
+    this.truncateAt = init.truncateAt;
+    this.rawBody = init.body;
+    this.rawText = init.body.toString('utf8');
+    let data: unknown = this.rawText;
+    if (this.rawText.length > 0) {
+      try {
+        data = JSON.parse(this.rawText);
+      } catch {
+        /* not JSON, keep text */
+      }
+    }
+    this.data = data as T;
+  }
+
+  /** Body as text. */
+  text(): string {
+    return this.rawText;
+  }
+
+  /** Body as bytes. */
+  body(): Buffer {
+    return this.rawBody;
+  }
+
+  /** Body parsed as JSON; throws `TF_API_ASSERTION_FAILED` if it is not JSON. */
+  json<R = T>(): R {
+    try {
+      return JSON.parse(this.rawText) as R;
+    } catch (cause) {
+      throw this.fail('Response body is not valid JSON.', { cause });
+    }
+  }
+
+  /**
+   * Query the JSON body. Supports `$.a.b[0]`, `$.items[*].id`, `$['key.with.dots']`.
+   * Returns a single value (or `undefined`) for plain paths and an array for wildcard paths.
+   */
+  jsonPath<R = unknown>(path: string): R {
+    let result;
+    try {
+      result = queryJsonPath(this.parsedOrThrow(), path);
+    } catch (cause) {
+      if (cause instanceof TestFlyError) throw cause;
+      throw this.fail(`Invalid JSON path "${path}": ${(cause as Error).message}`, { cause });
+    }
+    return (result.multi ? result.values : result.values[0]) as R;
+  }
+
+  expectStatus(...codes: number[]): this {
+    if (!codes.includes(this.status)) this.failWith(`Expected status ${codes.join(' or ')} but got ${this.status}.`);
+    return this;
+  }
+
+  expectOk(): this {
+    if (!this.ok) this.failWith('Expected a 2xx response.');
+    return this;
+  }
+
+  expectHeader(name: string, value: string | RegExp): this {
+    const actual = this.headers[name.toLowerCase()];
+    const matches = actual !== undefined && (typeof value === 'string' ? actual === value : value.test(actual));
+    if (!matches) this.failWith(`Expected header "${name}" to match ${String(value)} but got ${actual === undefined ? 'no such header' : `"${actual}"`}.`);
+    return this;
+  }
+
+  expectJson(path: string, value: unknown): this {
+    const actual = this.jsonPath(path);
+    if (!isDeepStrictEqual(actual, value)) {
+      this.failWith(`Expected ${path} to equal ${safeStringify(value)} but got ${safeStringify(actual)}.`);
+    }
+    return this;
+  }
+
+  /** Validate the JSON body with a zod schema and return the parsed value. */
+  expectSchema<S>(schema: SchemaLike<S>): S {
+    const result = schema.safeParse(this.parsedOrThrow());
+    if (!result.success) {
+      const issues = (result.error?.issues ?? []).map((i) => `  - ${i.path.map(String).join('.') || '(root)'}: ${i.message}`).join('\n');
+      throw new TestFlyError('TF_API_SCHEMA_MISMATCH', `Response does not match the schema.\n${issues}\n${this.describe()}`, {
+        details: { method: this.request.method, url: this.request.url, status: this.status },
+      });
+    }
+    return result.data as S;
+  }
+
+  expectDurationBelow(ms: number): this {
+    if (this.durationMs >= ms) this.failWith(`Expected the request to take less than ${ms}ms but it took ${this.durationMs}ms.`);
+    return this;
+  }
+
+  private parsedOrThrow(): unknown {
+    try {
+      return JSON.parse(this.rawText);
+    } catch (cause) {
+      throw this.fail('Response body is not valid JSON.', { cause });
+    }
+  }
+
+  private describe(): string {
+    return `${this.request.method} ${this.request.url} → ${this.status}\n  body: ${truncate(this.rawText, this.truncateAt)}`;
+  }
+
+  private failWith(message: string): never {
+    throw this.fail(message);
+  }
+
+  private fail(message: string, extra: { cause?: unknown } = {}): TestFlyError {
+    return new TestFlyError('TF_API_ASSERTION_FAILED', `${message}\n  ${this.describe()}`, {
+      cause: extra.cause,
+      details: { method: this.request.method, url: this.request.url, status: this.status },
+    });
+  }
+}
+
+function safeStringify(v: unknown): string {
+  try {
+    return JSON.stringify(v) ?? String(v);
+  } catch {
+    return String(v);
+  }
+}

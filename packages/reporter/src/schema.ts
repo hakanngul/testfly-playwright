@@ -39,6 +39,18 @@ export const HealEventSchema = z.object({
 });
 export type HealEvent = z.infer<typeof HealEventSchema>;
 
+/**
+ * Free-form metadata attached with {@link CONTENT_TYPES}.meta. All fields optional (additive contract).
+ * `analysis` (markdown) is copied into {@link TestRecord.analysis}.
+ */
+export const MetaEventSchema = z
+  .object({
+    analysis: z.string().optional(),
+    tags: z.array(z.string()).optional(),
+  })
+  .passthrough();
+export type MetaEvent = z.infer<typeof MetaEventSchema>;
+
 /** A named step logged through the `step` fixture. */
 export const StepEventSchema = z.object({
   title: z.string(),
@@ -96,6 +108,8 @@ export const TestRecordSchema = z.object({
   /** passed only after a retry */
   flaky: z.boolean(),
   quarantined: z.boolean().default(false),
+  /** Reason from the `quarantine` annotation, if any (additive field). */
+  quarantineReason: z.string().optional(),
   retries: z.number().int(),
   durationMs: z.number(),
   error: z

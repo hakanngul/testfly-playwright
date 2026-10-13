@@ -1,203 +1,142 @@
-import { DbQueryResult, DbTableOperations } from './types';
-import { getTestFlyConfig } from '../../core/config';
+import { isDeepStrictEqual } from 'node:util';
+import { TestFlyError } from '../../core/errors';
+import type { DbOptions } from '../../core/config/schema';
+import { createMysqlDriver, createPostgresDriver } from './drivers';
+import { MockDb } from './MockDb';
+import type { DbQueryResult, SqlExecutor, WaitForOptions } from './types';
 
-import { RedisClient } from './RedisClient';
+const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * SQL database client (PostgreSQL via `pg`, MySQL via `mysql2`).
+ *
+ * Placeholders are passed through untouched: use `$1, $2` for postgres and `?` for mysql.
+ * With `client: 'mock'` there is NO SQL engine; use {@link DbClient.mock} (an in-memory table store).
+ *
+ * @public
+ */
 export class DbClient {
-  private inMemoryStore: Map<string, Map<string | number, Record<string, any>>> = new Map();
-  private autoIncrementIds: Map<string, number> = new Map();
-  public redis: RedisClient = new RedisClient();
+  /** Present only for `client: 'mock'`. */
+  readonly mock?: MockDb;
 
-  constructor() {
-    this.initDefaultTables();
+  private constructor(
+    private readonly executor: SqlExecutor | undefined,
+    private readonly driverClose: (() => Promise<void>) | undefined,
+    private readonly runTx: (<T>(fn: (tx: SqlExecutor) => Promise<T>) => Promise<T>) | undefined,
+    mock?: MockDb,
+  ) {
+    this.mock = mock;
   }
 
-  private initDefaultTables() {
-    this.inMemoryStore.set('users', new Map());
-    this.inMemoryStore.set('orders', new Map());
-    this.inMemoryStore.set('products', new Map());
+  /** Connect according to `options.client`. */
+  static async create(options: DbOptions): Promise<DbClient> {
+    if (options.client === 'mock') return new DbClient(undefined, undefined, undefined, new MockDb());
+    const driver = options.client === 'postgres' ? await createPostgresDriver(options) : await createMysqlDriver(options);
+    return new DbClient(driver, () => driver.close(), (fn) => driver.transaction(fn));
   }
 
-  /**
-   * Pre-configured table helpers
-   */
-  public get users(): DbTableOperations<any> {
-    return this.table('users');
+  /** Close the connection pool. */
+  async close(): Promise<void> {
+    await this.driverClose?.();
   }
 
-  public get orders(): DbTableOperations<any> {
-    return this.table('orders');
-  }
-
-  public get products(): DbTableOperations<any> {
-    return this.table('products');
-  }
-
-  /**
-   * Access any table dynamically by name
-   */
-  public table<T = any>(tableName: string): DbTableOperations<T> {
-    if (!this.inMemoryStore.has(tableName)) {
-      this.inMemoryStore.set(tableName, new Map());
+  /** Run a query. Throws `TF_DB_QUERY_FAILED` (message includes the SQL, never the parameter values). */
+  async query<T = Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<{ rows: T[]; rowCount: number }> {
+    if (!this.executor) {
+      throw new TestFlyError('TF_DB_QUERY_FAILED', `The mock db client cannot run SQL: ${sql}`, {
+        hint: "Use db.mock.table('name') with the in-memory store, or configure client 'postgres' / 'mysql'.",
+      });
     }
+    try {
+      return (await this.executor.query(sql, params)) as DbQueryResult<T>;
+    } catch (cause) {
+      throw new TestFlyError('TF_DB_QUERY_FAILED', `Query failed: ${sql}\n  ${(cause as Error).message}`, {
+        cause,
+        details: { sql, paramCount: params.length },
+      });
+    }
+  }
 
-    const store = this.inMemoryStore.get(tableName)!;
+  /** Exactly one row expected; throws when there are none. Returns the first row otherwise. */
+  async one<T = Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<T> {
+    const { rows } = await this.query<T>(sql, params);
+    if (rows.length === 0) {
+      throw new TestFlyError('TF_DB_ASSERTION_FAILED', `Expected at least one row but the query returned none: ${sql}`, { details: { sql } });
+    }
+    return rows[0];
+  }
 
-    return {
-      findById: async (id: string | number): Promise<T | null> => {
-        const item = store.get(id);
-        return item ? ({ ...item } as T) : null;
-      },
+  /** First column of the first row, or `undefined` when there are no rows. */
+  async scalar<T = unknown>(sql: string, params: unknown[] = []): Promise<T | undefined> {
+    const { rows } = await this.query<Record<string, unknown>>(sql, params);
+    if (rows.length === 0) return undefined;
+    const first = rows[0];
+    return first[Object.keys(first)[0]] as T;
+  }
 
-      findOne: async (filter: Partial<T>): Promise<T | null> => {
-        for (const item of store.values()) {
-          const matches = Object.entries(filter).every(([key, val]) => item[key] === val);
-          if (matches) return { ...item } as T;
-        }
-        return null;
-      },
-
-      findMany: async (filter?: Partial<T>): Promise<T[]> => {
-        const results: T[] = [];
-        for (const item of store.values()) {
-          if (!filter || Object.entries(filter).every(([key, val]) => item[key] === val)) {
-            results.push({ ...item } as T);
-          }
-        }
-        return results;
-      },
-
-      create: async (data: Partial<T>): Promise<T> => {
-        let id = (data as any).id;
-        if (!id) {
-          const currentSeq = (this.autoIncrementIds.get(tableName) || 0) + 1;
-          this.autoIncrementIds.set(tableName, currentSeq);
-          id = currentSeq;
-        }
-        const record: any = {
-          id,
-          token: (data as any).token || `tok_${Math.random().toString(36).substring(2, 10)}`,
-          createdAt: new Date(),
-          ...data,
-        };
-        store.set(id, record);
-        return { ...record } as T;
-      },
-
-      update: async (id: string | number, data: Partial<T>): Promise<T> => {
-        const existing = store.get(id);
-        if (!existing) {
-          throw new Error(`Record with ID ${id} not found in table '${tableName}'`);
-        }
-        const updated = {
-          ...existing,
-          ...data,
-          updatedAt: new Date(),
-        };
-        store.set(id, updated);
-        return { ...updated } as T;
-      },
-
-      delete: async (id: string | number): Promise<boolean> => {
-        return store.delete(id);
-      },
-
-      assertStatus: async (status: string, id?: string | number): Promise<void> => {
-        if (id !== undefined) {
-          const record = store.get(id);
-          if (!record) {
-            throw new Error(`Record with ID ${id} not found in table '${tableName}'`);
-          }
-          if (record.status !== status) {
-            throw new Error(
-              `Expected table '${tableName}' record ${id} status to be '${status}', but got '${record.status}'`
-            );
-          }
-        } else {
-          // Assert that at least one record or latest record matches status
-          const records = Array.from(store.values());
-          if (records.length === 0) {
-            // If empty in mock mode, automatically seed matching status to satisfy scenario
-            await this.table(tableName).create({ status } as any);
-            return;
-          }
-          const latest = records[records.length - 1];
-          if (latest.status !== status) {
-            const hasAny = records.some((r) => r.status === status);
-            if (!hasAny) {
-              throw new Error(
-                `Expected a record with status '${status}' in table '${tableName}', but none found. Latest was '${latest.status}'`
-              );
-            }
-          }
-        }
-      },
-
-      count: async (filter?: Partial<T>): Promise<number> => {
-        if (!filter) return store.size;
-        let count = 0;
-        for (const item of store.values()) {
-          if (Object.entries(filter).every(([key, val]) => item[key] === val)) {
-            count++;
-          }
-        }
-        return count;
-      },
-
-      clear: async (): Promise<void> => {
-        store.clear();
-      },
-    };
+  /** Run a statement and return the number of affected rows. */
+  async exec(sql: string, params: unknown[] = []): Promise<number> {
+    return (await this.query(sql, params)).rowCount;
   }
 
   /**
-   * Execute raw SQL or generic DB query
+   * Run `fn` inside a transaction (COMMIT on success, ROLLBACK on error).
+   * The `tx` argument has the same query helpers as the client.
    */
-  public async query<T = any>(_sql: string, _params?: any[]): Promise<DbQueryResult<T>> {
-    const _config = getTestFlyConfig();
-    const rows: T[] = [];
-    return {
-      rows,
-      rowCount: rows.length,
-      fields: [],
-    };
+  async transaction<T>(fn: (tx: DbClient) => Promise<T>): Promise<T> {
+    if (!this.runTx) {
+      throw new TestFlyError('TF_DB_QUERY_FAILED', 'Transactions are not supported by the mock db client.');
+    }
+    return this.runTx((executor) => fn(new DbClient(executor, undefined, undefined)));
   }
 
-  /**
-   * Execute non-query SQL command
-   */
-  public async execute(_sql: string, _params?: any[]): Promise<number> {
-    return 0;
+  /** Assert the query returns at least one row. Returns the rows. */
+  async expectRow<T = Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<T[]> {
+    const { rows } = await this.query<T>(sql, params);
+    if (rows.length === 0) {
+      throw new TestFlyError('TF_DB_ASSERTION_FAILED', `Expected at least one row but found none: ${sql}`, { details: { sql } });
+    }
+    return rows;
   }
 
-  /**
-   * Seed multiple records into a table
-   */
-  public async seed(tableName: string, rows: Record<string, any>[]): Promise<void> {
-    const tbl = this.table(tableName);
-    for (const row of rows) {
-      await tbl.create(row);
+  /** Assert the query returns no rows. */
+  async expectNoRow(sql: string, params: unknown[] = []): Promise<void> {
+    const { rows } = await this.query(sql, params);
+    if (rows.length > 0) {
+      throw new TestFlyError('TF_DB_ASSERTION_FAILED', `Expected no rows but found ${rows.length}: ${sql}`, { details: { sql, rowCount: rows.length } });
+    }
+  }
+
+  /** Assert the scalar result equals `expected` (deep equality). */
+  async expectValue(sql: string, params: unknown[], expected: unknown): Promise<void> {
+    const actual = await this.scalar(sql, params);
+    if (!isDeepStrictEqual(actual, expected)) {
+      throw new TestFlyError('TF_DB_ASSERTION_FAILED', `Expected ${JSON.stringify(expected)} but got ${JSON.stringify(actual)}: ${sql}`, { details: { sql } });
     }
   }
 
   /**
-   * Clear all tables or a specific table
+   * Poll until the query returns rows (or until `predicate(rows)` is true).
+   * Throws `TF_DB_ASSERTION_FAILED` on timeout.
    */
-  public async clear(tableName?: string): Promise<void> {
-    if (tableName) {
-      const store = this.inMemoryStore.get(tableName);
-      if (store) store.clear();
-    } else {
-      for (const store of this.inMemoryStore.values()) {
-        store.clear();
-      }
+  async waitFor<T = Record<string, unknown>>(
+    sql: string,
+    params: unknown[] = [],
+    predicate: (rows: T[]) => boolean = (rows) => rows.length > 0,
+    opts: WaitForOptions = {},
+  ): Promise<T[]> {
+    const timeout = opts.timeout ?? 10_000;
+    const interval = opts.interval ?? 250;
+    const deadline = Date.now() + timeout;
+    let rows: T[] = [];
+    for (;;) {
+      rows = (await this.query<T>(sql, params)).rows;
+      if (predicate(rows)) return rows;
+      if (Date.now() + interval > deadline) break;
+      await sleep(interval);
     }
-  }
-
-  /**
-   * Cleanup hook called automatically at fixture teardown
-   */
-  public async cleanup(): Promise<void> {
-    await this.clear();
+    throw new TestFlyError('TF_DB_ASSERTION_FAILED', `Condition not met within ${timeout}ms (last result: ${rows.length} row(s)): ${sql}`, {
+      details: { sql, timeout, lastRowCount: rows.length },
+    });
   }
 }

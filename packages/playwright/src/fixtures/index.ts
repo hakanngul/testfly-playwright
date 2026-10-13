@@ -1,145 +1,47 @@
-import { test as base } from 'playwright-bdd';
-import { ApiClient } from '../clients/api/ApiClient';
-import { DbClient } from '../clients/db/DbClient';
-import { MailClient } from '../clients/mail/MailClient';
-import { StepLogger } from '../core/steps/StepLogger';
-import { AuthManager } from '../clients/auth/AuthManager';
-import { A11yClient } from '../quality/a11y/A11yClient';
-import { MockClient } from '../clients/mock/MockClient';
-import { PerformanceClient } from '../quality/performance/PerformanceClient';
-import { VisualClient } from '../quality/visual/VisualClient';
-import { FakerClient } from '../clients/faker/FakerClient';
-import { MobileClient } from '../clients/mobile/MobileClient';
-import { MobileScreen } from '../clients/mobile/MobileScreen';
-import { TestContext } from '../core/context/TestContext';
-import { TestDataManager } from '../core/context/TestDataManager';
-import { LocatorRegistry } from '../locators/LocatorRegistry';
-import { TypedLocatorKey } from '../locators/types';
-import { Locator } from '@playwright/test';
+import { mergeTests, expect } from '@playwright/test';
+import { coreTest } from './core';
+import { apiTest } from './api';
+import { dataTest } from './data';
+import { locatorTest } from './locators';
+import { qualityTest } from './quality';
+import { mockTest } from './mock';
+import { sessionTest } from './session';
+import { quarantineTest } from './quarantine';
 
+export { coreTest, apiTest, dataTest, locatorTest, qualityTest, mockTest, sessionTest, quarantineTest };
+import type { CoreFixtures, CoreWorkerFixtures } from './core';
+import type { ApiFixtures } from './api';
+import type { DataWorkerFixtures } from './data';
+import type { LocatorFixtures, LocatorWorkerFixtures } from './locators';
+import type { QualityFixtures } from './quality';
+import type { MockFixtures } from './mock';
+import type { SessionFixtures } from './session';
 
-import { SmartForm } from '../quality/form/SmartForm';
-import { apiFixture } from './api.fixture';
-import { dbFixture } from './db.fixture';
-import { mailFixture } from './mail.fixture';
-import { stepFixture } from './step.fixture';
-import { authFixture } from './auth.fixture';
-import { a11yFixture } from './a11y.fixture';
-import { mockFixture } from './mock.fixture';
-import { performanceFixture } from './performance.fixture';
-import { visualFixture } from './visual.fixture';
-import { fakerFixture } from './faker.fixture';
-import { mobileFixture } from './mobile.fixture';
-import { contextFixture } from './context.fixture';
-import { locatorsFixture, locateFixture } from './locator.fixture';
+export type { CoreFixtures, CoreWorkerFixtures } from './core';
+export type { ApiFixtures } from './api';
+export type { DataWorkerFixtures } from './data';
+export type { LocatorFixtures, LocatorWorkerFixtures } from './locators';
+export type { QualityFixtures } from './quality';
+export type { MockFixtures } from './mock';
+export type { SessionFixtures } from './session';
 
-export interface TestFlyFixtures {
-  api: ApiClient;
-  db: DbClient;
-  mail: MailClient;
-  step: StepLogger;
-  auth: AuthManager;
-  a11y: A11yClient;
-  mock: MockClient;
-  performance: PerformanceClient;
-  visual: VisualClient;
-  faker: FakerClient;
-  data: FakerClient;
-  mobile: MobileClient;
-  screen: MobileScreen;
-  scenarioContext: TestContext;
-  testContext: TestContext;
-  state: TestContext;
-  testData: TestDataManager;
-  locators: LocatorRegistry;
-  locate: (key: TypedLocatorKey) => Locator;
-  form: {
-    fill: (formData: Record<string, string | number | boolean>, root?: Locator) => Promise<void>;
-  };
-}
+/**
+ * The batteries-included `test`: every TestFly fixture set merged with Playwright's own.
+ * Use the individual sets with `mergeTests` for a leaner setup.
+ *
+ * @public
+ */
+export const test = mergeTests(coreTest, apiTest, dataTest, locatorTest, qualityTest, mockTest, sessionTest, quarantineTest);
 
+/** Fixture types of the default {@link test}. @public */
+export type TestFlyFixtures = CoreFixtures &
+  CoreWorkerFixtures &
+  ApiFixtures &
+  DataWorkerFixtures &
+  LocatorFixtures &
+  LocatorWorkerFixtures &
+  QualityFixtures &
+  MockFixtures &
+  SessionFixtures;
 
-export const test = base.extend<TestFlyFixtures>({
-  api: apiFixture,
-  db: dbFixture,
-  mail: mailFixture,
-  step: stepFixture,
-  auth: authFixture,
-  form: async ({ page }, use) => {
-    await use({
-      fill: (formData, root) => SmartForm.fill(page, formData, root),
-    });
-  },
-  a11y: async ({ page }, use) => {
-    const a11yClient = new A11yClient(page);
-    await use(a11yClient);
-  },
-  mock: async ({ page }, use) => {
-    const mockClient = new MockClient(page);
-    await use(mockClient);
-    await mockClient.reset();
-  },
-  performance: async ({ page }, use) => {
-    const performanceClient = new PerformanceClient(page);
-    await use(performanceClient);
-  },
-  visual: async ({ page }, use) => {
-    const visualClient = new VisualClient(page);
-    await use(visualClient);
-  },
-  faker: async ({}, use) => {
-    const fakerClient = new FakerClient();
-    await use(fakerClient);
-  },
-  data: async ({}, use) => {
-    const fakerClient = new FakerClient();
-    await use(fakerClient);
-  },
-  mobile: async ({}, use) => {
-    const mobileClient = new MobileClient();
-    await use(mobileClient);
-  },
-  screen: async ({}, use) => {
-    const mobileClient = new MobileClient();
-    await use(mobileClient.screen);
-  },
-  scenarioContext: async ({}, use) => {
-    const testContext = new TestContext();
-    await use(testContext);
-  },
-  testContext: async ({}, use) => {
-    const testContext = new TestContext();
-    await use(testContext);
-  },
-  state: async ({}, use) => {
-    const testContext = new TestContext();
-    await use(testContext);
-  },
-  testData: async ({}, use) => {
-    const testDataManager = new TestDataManager();
-    await use(testDataManager);
-  },
-  locators: locatorsFixture,
-  locate: locateFixture,
-});
-
-export { expect } from '@playwright/test';
-export * from './api.fixture';
-export * from './db.fixture';
-export * from './mail.fixture';
-export * from './step.fixture';
-export * from './auth.fixture';
-export * from './a11y.fixture';
-export * from './mock.fixture';
-export * from './performance.fixture';
-export * from './visual.fixture';
-export * from './faker.fixture';
-export * from './mobile.fixture';
-export * from './context.fixture';
-export * from './locator.fixture';
-
-
-
-
-
-
+export { expect, mergeTests };

@@ -1,5 +1,7 @@
-import { Page, Route, Request } from '@playwright/test';
+import type { Page, Route, Request } from '@playwright/test';
+import { TestFlyError } from '../../core/errors';
 
+/** @public */
 export interface MockResponseOptions {
   status?: number;
   headers?: Record<string, string>;
@@ -7,26 +9,84 @@ export interface MockResponseOptions {
   delay?: number;
 }
 
+/** A request that matched a mock route. @public */
 export interface InterceptedRequest {
   url: string;
   method: string;
   headers: Record<string, string>;
-  postData: any;
+  postData: unknown;
   timestamp: number;
 }
 
+/** Options of {@link MockClient.expectRequest}. @public */
+export interface ExpectRequestOptions {
+  method?: string;
+  /** Exact number of matching requests (default: at least one). */
+  times?: number;
+}
+
+type RouteHandler = (route: Route, request: Request) => Promise<void> | void;
+
+/**
+ * Thin helper over `page.route`: declare mocked responses, record the requests that hit them and assert on them.
+ * `reset()` removes every route this client registered.
+ *
+ * @public
+ */
 export class MockClient {
   private interceptedRequests: InterceptedRequest[] = [];
-  private activeRoutes: (string | RegExp)[] = [];
+  private activeRoutes: { pattern: string | RegExp; handler: RouteHandler }[] = [];
 
   constructor(private page: Page) {}
+
+  private async register(pattern: string | RegExp, handler: RouteHandler): Promise<void> {
+    this.activeRoutes.push({ pattern, handler });
+    await this.page.route(pattern, handler);
+  }
+
+  private record(request: Request): void {
+    let postData: unknown = null;
+    try {
+      postData = request.postDataJSON() || request.postData();
+    } catch {
+      postData = request.postData();
+    }
+    this.interceptedRequests.push({
+      url: request.url(),
+      method: request.method(),
+      headers: request.headers(),
+      postData,
+      timestamp: Date.now(),
+    });
+  }
+
+  /**
+   * Assert that a request matching `urlOrPredicate` was intercepted (at least once, or exactly `times`).
+   * Throws `TF_MOCK_ASSERTION_FAILED`.
+   */
+  expectRequest(urlOrPredicate: string | RegExp | ((req: InterceptedRequest) => boolean), opts: ExpectRequestOptions = {}): InterceptedRequest[] {
+    const matches = this.interceptedRequests.filter((r) => {
+      if (opts.method && r.method.toUpperCase() !== opts.method.toUpperCase()) return false;
+      if (typeof urlOrPredicate === 'function') return urlOrPredicate(r);
+      return typeof urlOrPredicate === 'string' ? r.url.includes(urlOrPredicate) : urlOrPredicate.test(r.url);
+    });
+    const ok = opts.times === undefined ? matches.length > 0 : matches.length === opts.times;
+    if (!ok) {
+      const seen = this.interceptedRequests.map((r) => `${r.method} ${r.url}`).join('\n    ') || '(none)';
+      throw new TestFlyError(
+        'TF_MOCK_ASSERTION_FAILED',
+        `Expected ${opts.times === undefined ? 'at least one' : opts.times} intercepted request(s) matching ${typeof urlOrPredicate === 'function' ? 'predicate' : String(urlOrPredicate)}${opts.method ? ` (${opts.method})` : ''}, but found ${matches.length}.\n  Intercepted requests:\n    ${seen}`,
+      );
+    }
+    return matches;
+  }
 
   /**
    * Mock a GET request
    */
   async get(
     urlOrPattern: string | RegExp,
-    body: any,
+    body: unknown,
     options: MockResponseOptions = {}
   ): Promise<void> {
     await this.mockRoute('GET', urlOrPattern, body, options);
@@ -37,7 +97,7 @@ export class MockClient {
    */
   async post(
     urlOrPattern: string | RegExp,
-    body: any,
+    body: unknown,
     options: MockResponseOptions = {}
   ): Promise<void> {
     await this.mockRoute('POST', urlOrPattern, body, options);
@@ -48,7 +108,7 @@ export class MockClient {
    */
   async put(
     urlOrPattern: string | RegExp,
-    body: any,
+    body: unknown,
     options: MockResponseOptions = {}
   ): Promise<void> {
     await this.mockRoute('PUT', urlOrPattern, body, options);
@@ -59,7 +119,7 @@ export class MockClient {
    */
   async delete(
     urlOrPattern: string | RegExp,
-    body: any,
+    body: unknown,
     options: MockResponseOptions = {}
   ): Promise<void> {
     await this.mockRoute('DELETE', urlOrPattern, body, options);
@@ -70,7 +130,7 @@ export class MockClient {
    */
   async json(
     urlOrPattern: string | RegExp,
-    data: any,
+    data: unknown,
     status: number = 200,
     options: MockResponseOptions = {}
   ): Promise<void> {
@@ -83,7 +143,7 @@ export class MockClient {
   async delay(
     urlOrPattern: string | RegExp,
     delayMs: number,
-    body: any = {},
+    body: unknown = {},
     options: MockResponseOptions = {}
   ): Promise<void> {
     await this.mockRoute('*', urlOrPattern, body, { ...options, delay: delayMs });
@@ -92,10 +152,10 @@ export class MockClient {
   /**
    * Abort network request with specific failure code (e.g. failed, timedout, connectionreset)
    */
-  async abort(urlOrPattern: string | RegExp, errorCode: string = 'failed'): Promise<void> {
-    this.activeRoutes.push(urlOrPattern);
-    await this.page.route(urlOrPattern, (route) => {
-      route.abort(errorCode as any);
+  async abort(urlOrPattern: string | RegExp, errorCode = 'failed'): Promise<void> {
+    await this.register(urlOrPattern, async (route, request) => {
+      this.record(request);
+      await route.abort(errorCode);
     });
   }
 
@@ -105,32 +165,16 @@ export class MockClient {
   private async mockRoute(
     expectedMethod: string,
     urlOrPattern: string | RegExp,
-    body: any,
+    body: unknown,
     options: MockResponseOptions = {}
   ): Promise<void> {
-    this.activeRoutes.push(urlOrPattern);
-
-    await this.page.route(urlOrPattern, async (route: Route, request: Request) => {
+    await this.register(urlOrPattern, async (route: Route, request: Request) => {
       if (expectedMethod !== '*' && request.method().toUpperCase() !== expectedMethod.toUpperCase()) {
         await route.continue();
         return;
       }
 
-      // Record request in history
-      let parsedPostData: any = null;
-      try {
-        parsedPostData = request.postDataJSON() || request.postData();
-      } catch {
-        parsedPostData = request.postData();
-      }
-
-      this.interceptedRequests.push({
-        url: request.url(),
-        method: request.method(),
-        headers: request.headers(),
-        postData: parsedPostData,
-        timestamp: Date.now(),
-      });
+      this.record(request);
 
       if (options.delay && options.delay > 0) {
         await new Promise((resolve) => setTimeout(resolve, options.delay));
@@ -177,9 +221,9 @@ export class MockClient {
    * Remove all active mock routes from page
    */
   async reset(): Promise<void> {
-    for (const route of this.activeRoutes) {
+    for (const { pattern, handler } of this.activeRoutes) {
       try {
-        await this.page.unroute(route);
+        await this.page.unroute(pattern, handler);
       } catch {
         // Ignore if already unrouted
       }

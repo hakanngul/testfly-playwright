@@ -1,82 +1,103 @@
-import { Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
+import { TestFlyError } from '../../core/errors';
 
+/**
+ * Measured page metrics in milliseconds (CLS is unitless). A metric the browser cannot report
+ * (for example LCP/CLS outside Chromium) is `null` – values are never estimated.
+ *
+ * @public
+ */
 export interface WebVitals {
-  ttfb: number; // Time to First Byte (ms)
-  domContentLoaded: number; // DOMContentLoaded (ms)
-  loadTime: number; // Full Page Load (ms)
-  lcp: number; // Largest Contentful Paint (ms)
-  cls: number; // Cumulative Layout Shift score
-  fcp: number; // First Contentful Paint (ms)
+  /** Time to first byte. */
+  ttfb: number | null;
+  /** DOMContentLoaded relative to navigation start. */
+  domContentLoaded: number | null;
+  /** Load event end relative to navigation start. */
+  loadTime: number | null;
+  /** First Contentful Paint. */
+  fcp: number | null;
+  /** Largest Contentful Paint. */
+  lcp: number | null;
+  /** Cumulative Layout Shift. */
+  cls: number | null;
 }
 
+/**
+ * Web Vitals collection and assertions. Exposed as the `perf` fixture.
+ * @public
+ */
 export class PerformanceClient {
-  constructor(private page: Page) {}
+  constructor(private readonly page: Page) {}
 
-  /**
-   * Extract Core Web Vitals and Navigation Timing metrics from current page
-   */
+  /** Read navigation timings plus buffered paint, LCP and layout-shift entries of the current page. */
   async getVitals(): Promise<WebVitals> {
-    const rawMetrics = await this.page.evaluate(() => {
-      const navEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
-      const paintEntries = performance.getEntriesByType('paint');
+    return this.page.evaluate(async (): Promise<WebVitals> => {
+      const round = (n: number): number => Math.max(0, Math.round(n));
+      const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+      const fcpEntry = performance.getEntriesByName('first-contentful-paint')[0];
 
-      let fcp = 0;
-      for (const entry of paintEntries) {
-        if (entry.name === 'first-contentful-paint') {
-          fcp = entry.startTime;
-        }
-      }
+      const observe = (type: string): Promise<PerformanceEntry[] | null> =>
+        new Promise((resolve) => {
+          if (!PerformanceObserver.supportedEntryTypes?.includes(type)) return resolve(null);
+          const seen: PerformanceEntry[] = [];
+          const observer = new PerformanceObserver((list) => seen.push(...list.getEntries()));
+          observer.observe({ type, buffered: true });
+          setTimeout(() => {
+            seen.push(...observer.takeRecords());
+            observer.disconnect();
+            resolve(seen);
+          }, 50);
+        });
 
-      const ttfb = navEntry ? navEntry.responseStart - navEntry.requestStart : 0;
-      const domContentLoaded = navEntry ? navEntry.domContentLoadedEventEnd - navEntry.startTime : 0;
-      const loadTime = navEntry ? navEntry.loadEventEnd - navEntry.startTime : 0;
+      const [lcpEntries, shifts] = await Promise.all([observe('largest-contentful-paint'), observe('layout-shift')]);
+      const lcpLast = lcpEntries && lcpEntries.length ? lcpEntries[lcpEntries.length - 1] : undefined;
+      const cls = shifts
+        ? Number(
+            shifts
+              .filter((e) => !(e as PerformanceEntry & { hadRecentInput?: boolean }).hadRecentInput)
+              .reduce((sum, e) => sum + ((e as PerformanceEntry & { value?: number }).value ?? 0), 0)
+              .toFixed(4),
+          )
+        : null;
 
       return {
-        ttfb: Math.max(0, Math.round(ttfb)),
-        domContentLoaded: Math.max(0, Math.round(domContentLoaded)),
-        loadTime: Math.max(0, Math.round(loadTime)),
-        fcp: Math.max(0, Math.round(fcp)),
-        lcp: Math.max(0, Math.round(fcp * 1.2 || loadTime * 0.8)), // Fallback approximation if observers not hooked
-        cls: 0.01,
+        ttfb: nav ? round(nav.responseStart - nav.startTime) : null,
+        domContentLoaded: nav ? round(nav.domContentLoadedEventEnd - nav.startTime) : null,
+        loadTime: nav && nav.loadEventEnd > 0 ? round(nav.loadEventEnd - nav.startTime) : null,
+        fcp: fcpEntry ? round(fcpEntry.startTime) : null,
+        lcp: lcpLast ? round(lcpLast.startTime) : null,
+        cls,
       };
     });
-
-    return rawMetrics;
   }
 
-  /**
-   * Assert Largest Contentful Paint (LCP) is under threshold (Good: < 2500ms)
-   */
-  async assertLcp(maxMs: number = 2500): Promise<void> {
+  /** Assert LCP is at most `maxMs` (default 2500, "good" threshold). */
+  async assertLcp(maxMs = 2500): Promise<void> {
+    await this.assertMetric('lcp', maxMs, 'ms');
+  }
+
+  /** Assert CLS is at most `maxScore` (default 0.1, "good" threshold). */
+  async assertCls(maxScore = 0.1): Promise<void> {
+    await this.assertMetric('cls', maxScore, '');
+  }
+
+  /** Assert TTFB is at most `maxMs` (default 800, "good" threshold). */
+  async assertTtfb(maxMs = 800): Promise<void> {
+    await this.assertMetric('ttfb', maxMs, 'ms');
+  }
+
+  private async assertMetric(metric: 'lcp' | 'cls' | 'ttfb', max: number, unit: string): Promise<void> {
     const vitals = await this.getVitals();
-    if (vitals.lcp > maxMs) {
-      throw new Error(
-        `❌ Performance Assert Failed: LCP is ${vitals.lcp}ms, exceeding maximum threshold of ${maxMs}ms`
-      );
+    const value = vitals[metric];
+    if (value === null) {
+      throw new TestFlyError('TF_QUALITY_UNSUPPORTED', `${metric.toUpperCase()} is not available in this browser or page.`, {
+        hint: 'LCP and CLS are only reported by Chromium-based browsers, after the page has rendered.',
+      });
     }
-  }
-
-  /**
-   * Assert Cumulative Layout Shift (CLS) is under threshold (Good: < 0.1)
-   */
-  async assertCls(maxScore: number = 0.1): Promise<void> {
-    const vitals = await this.getVitals();
-    if (vitals.cls > maxScore) {
-      throw new Error(
-        `❌ Performance Assert Failed: CLS score is ${vitals.cls}, exceeding maximum threshold of ${maxScore}`
-      );
-    }
-  }
-
-  /**
-   * Assert Time to First Byte (TTFB) is under threshold (Good: < 800ms)
-   */
-  async assertTtfb(maxMs: number = 800): Promise<void> {
-    const vitals = await this.getVitals();
-    if (vitals.ttfb > maxMs) {
-      throw new Error(
-        `❌ Performance Assert Failed: TTFB is ${vitals.ttfb}ms, exceeding maximum threshold of ${maxMs}ms`
-      );
+    if (value > max) {
+      throw new TestFlyError('TF_QUALITY_ASSERTION_FAILED', `${metric.toUpperCase()} is ${value}${unit}, above the allowed ${max}${unit}.`, {
+        details: { metric, value, max },
+      });
     }
   }
 }

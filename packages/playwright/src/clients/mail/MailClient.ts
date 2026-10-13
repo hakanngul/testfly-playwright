@@ -1,150 +1,99 @@
-import { EmailMessage, WaitForEmailOptions } from './types';
+import { TestFlyError } from '../../core/errors';
+import type { MailOptions } from '../../core/config/schema';
+import { describeCriteria, extractCode, extractLinks, matchesCriteria, type ExtractCodeOptions } from './extract';
+import { ImapProvider } from './providers/imap';
+import { MailpitProvider } from './providers/mailpit';
+import { MailtrapProvider } from './providers/mailtrap';
+import { MockMail } from './providers/mock';
+import type { EmailMessage, MailCriteria, MailProvider, WaitForEmailOptions } from './types';
 
+const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Mail client for verifying emails sent by the application under test.
+ * Providers: `mailpit`, `mailtrap`, `imap`, and the explicit `mock` (only mails you `deliver`).
+ *
+ * @public
+ */
 export class MailClient {
-  private inbox: EmailMessage[] = [];
+  /** Present only for `provider: 'mock'`. */
+  readonly mock?: MockMail;
 
-  /**
-   * Wait for an incoming email matching specified criteria
-   */
-  public async waitForEmail(options: WaitForEmailOptions): Promise<EmailMessage> {
-    // Check if matching email already exists
-    const immediateMatch = this.findMatchingEmail(options);
-    if (immediateMatch) {
-      return immediateMatch;
+  private constructor(
+    private readonly provider: MailProvider,
+    private readonly timeouts: { poll: number; pollInterval: number },
+  ) {
+    this.mock = provider instanceof MockMail ? provider : undefined;
+  }
+
+  static async create(options: MailOptions, timeouts: { poll: number; pollInterval: number }): Promise<MailClient> {
+    let provider: MailProvider;
+    switch (options.provider) {
+      case 'mailpit':
+        provider = new MailpitProvider(options.url);
+        break;
+      case 'mailtrap':
+        provider = new MailtrapProvider(options);
+        break;
+      case 'imap':
+        provider = await ImapProvider.connect(options);
+        break;
+      case 'mock':
+        provider = new MockMail();
+        break;
     }
+    return new MailClient(provider, timeouts);
+  }
 
-    const timeout = options.timeout !== undefined ? options.timeout : 1000;
-    const pollInterval = options.pollInterval || 100;
-    const startTime = Date.now();
+  async close(): Promise<void> {
+    await this.provider.close?.();
+  }
 
-    while (Date.now() - startTime < timeout) {
-      const email = this.findMatchingEmail(options);
-      if (email) {
-        return email;
-      }
-      await new Promise((res) => setTimeout(res, pollInterval));
+  /** Messages matching `criteria`, newest first. */
+  async list(criteria: MailCriteria = {}): Promise<EmailMessage[]> {
+    const all = await this.provider.list();
+    return all.filter((m) => matchesCriteria(m, criteria)).sort((a, b) => b.date.getTime() - a.date.getTime());
+  }
+
+  /** Newest message (optionally for one recipient), or `undefined`. */
+  async latest(to?: string): Promise<EmailMessage | undefined> {
+    return (await this.list(to ? { to } : {}))[0];
+  }
+
+  /**
+   * Poll the provider until a message matches; returns the newest match.
+   * Throws `TF_MAIL_TIMEOUT` (criteria + number of mails seen) — never fabricates a message.
+   */
+  async waitForEmail(options: WaitForEmailOptions = {}): Promise<EmailMessage> {
+    const { timeout = this.timeouts.poll, pollInterval = this.timeouts.pollInterval, ...criteria } = options;
+    const deadline = Date.now() + timeout;
+    let seen = 0;
+    for (;;) {
+      const all = await this.provider.list();
+      seen = all.length;
+      const hit = all.filter((m) => matchesCriteria(m, criteria)).sort((a, b) => b.date.getTime() - a.date.getTime())[0];
+      if (hit) return hit;
+      if (Date.now() + pollInterval > deadline) break;
+      await sleep(pollInterval);
     }
-
-    // In mock mode without live email server, auto-generate matching email to allow smooth pipeline execution
-    const fallbackEmail = this.generateMockEmail(options);
-    this.inbox.push(fallbackEmail);
-    return fallbackEmail;
-  }
-
-  /**
-   * Get the most recent email received
-   */
-  public async getLatestEmail(to?: string): Promise<EmailMessage | null> {
-    const emails = await this.getEmails(to);
-    return emails.length > 0 ? emails[emails.length - 1] : null;
-  }
-
-  /**
-   * Get all emails, optionally filtered by recipient
-   */
-  public async getEmails(to?: string): Promise<EmailMessage[]> {
-    if (!to) return [...this.inbox];
-    return this.inbox.filter((m) => m.to.includes(to));
-  }
-
-  /**
-   * Search emails by criteria
-   */
-  public async searchEmail(criteria: Partial<EmailMessage>): Promise<EmailMessage[]> {
-    return this.inbox.filter((email) => {
-      return Object.entries(criteria).every(([key, val]) => (email as any)[key] === val);
+    throw new TestFlyError('TF_MAIL_TIMEOUT', `No email matched [${describeCriteria(criteria)}] within ${timeout}ms (${seen} email(s) seen in the ${this.provider.name} mailbox).`, {
+      hint: this.provider.name === 'mock' ? 'With the mock provider only mails passed to mail.mock.deliver() exist.' : 'Check the recipient address, the criteria and that the app can reach the mail server.',
+      details: { provider: this.provider.name, seen, timeout },
     });
   }
 
-  /**
-   * Extract numeric or alphanumeric verification code from email body
-   */
-  public extractVerificationCode(email: EmailMessage, pattern?: RegExp): string | null {
-    const regex = pattern || /\b([0-9]{4,8}|[A-Z0-9]{6})\b/;
-    const content = `${email.text || ''} ${email.html || ''}`;
-    const match = content.match(regex);
-    return match ? match[1] : null;
+  /** Extract a verification code from a message (`null` if none). */
+  extractCode(message: EmailMessage, opts?: ExtractCodeOptions): string | null {
+    return extractCode(message, opts);
   }
 
-  /**
-   * Extract URL/link from email body
-   */
-  public extractLink(email: EmailMessage, textPattern?: RegExp | string): string | null {
-    const content = `${email.html || ''} ${email.text || ''}`;
-    if (!textPattern) {
-      const urlRegex = /(https?:\/\/[^\s"'<>]+)/;
-      const match = content.match(urlRegex);
-      return match ? match[1] : null;
-    }
-
-    const regex = typeof textPattern === 'string' ? new RegExp(textPattern, 'i') : textPattern;
-    const match = content.match(regex);
-    return match ? match[0] : null;
+  /** Extract http(s) links from a message, optionally filtered. */
+  extractLinks(message: EmailMessage, filter?: string | RegExp | ((url: string) => boolean)): string[] {
+    return extractLinks(message, filter);
   }
 
-  /**
-   * Programmatically simulate sending an email into the inbox
-   */
-  public async sendMockEmail(message: Partial<EmailMessage>): Promise<EmailMessage> {
-    const email: EmailMessage = {
-      id: `mail_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      from: message.from || 'noreply@testfly.io',
-      to: message.to || ['user@testfly.io'],
-      subject: message.subject || 'Notification',
-      text: message.text || 'This is a test notification message.',
-      html: message.html || '<p>This is a test notification message.</p>',
-      date: message.date || new Date(),
-      headers: message.headers || {},
-    };
-    this.inbox.push(email);
-    return email;
-  }
-
-  /**
-   * Clear all emails in mailbox
-   */
-  public async clear(): Promise<void> {
-    this.inbox = [];
-  }
-
-  private findMatchingEmail(options: WaitForEmailOptions): EmailMessage | null {
-    for (let i = this.inbox.length - 1; i >= 0; i--) {
-      const email = this.inbox[i];
-      let matches = true;
-
-      if (options.to && !email.to.includes(options.to)) {
-        matches = false;
-      }
-      if (options.from && email.from !== options.from) {
-        matches = false;
-      }
-      if (options.subject) {
-        if (options.subject instanceof RegExp) {
-          if (!options.subject.test(email.subject)) matches = false;
-        } else if (!email.subject.includes(options.subject)) {
-          matches = false;
-        }
-      }
-
-      if (matches) return email;
-    }
-    return null;
-  }
-
-  private generateMockEmail(options: WaitForEmailOptions): EmailMessage {
-    const subjectStr =
-      options.subject instanceof RegExp
-        ? 'Sipariş Onayı'
-        : options.subject || 'Sipariş Onayı';
-
-    return {
-      id: `mail_${Date.now()}`,
-      from: options.from || 'support@testfly.io',
-      to: options.to ? [options.to] : ['user@testfly.io'],
-      subject: subjectStr,
-      text: `Sayın Kullanıcı,\n\n${subjectStr} işleminiz başarıyla tamamlanmıştır. Doğrulama kodunuz: 482910\nDetaylar: https://demo.testfly.io/orders/123`,
-      html: `<p>Sayın Kullanıcı,</p><p><strong>${subjectStr}</strong> işleminiz başarıyla tamamlanmıştır.</p><p>Doğrulama kodunuz: <b>482910</b></p><p><a href="https://demo.testfly.io/orders/123">Siparişi Görüntüle</a></p>`,
-      date: new Date(),
-    };
+  /** Delete all messages (supported by every provider). */
+  async clear(): Promise<void> {
+    await this.provider.clear();
   }
 }
