@@ -1,0 +1,42 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "strict": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": false,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": false,
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@testfly/playwright": [
+        "packages/playwright/src/index.ts"
+      ],
+      "@testfly/playwright/*": [
+        "packages/playwright/src/entries/*.ts"
+      ],
+      "@testfly/reporter": [
+        "packages/reporter/src/index.ts"
+      ],
+      "@testfly/reporter/schema": [
+        "packages/reporter/src/schema.ts"
+      ],
+      "@testfly/ai": [
+        "packages/ai/src/index.ts"
+      ]
+    }
+  }
+}

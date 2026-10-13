@@ -63,3 +63,7 @@ Thumbs.db
 .temp/
 .tmp/
 .turbo/
+
+# TestFly local state (history is generated; caches under .testfly/ are meant to be committed)
+.testfly/history/
+.testfly/report/

@@ -1,0 +1,51 @@
+{
+  "name": "create-testfly",
+  "version": "0.2.0-next.0",
+  "description": "Scaffold a new TestFly Playwright project: npm create testfly@latest",
+  "license": "Apache-2.0",
+  "author": "Hakan G\u00fcl",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hakanngul/testfly-playwright.git"
+  },
+  "homepage": "https://testfly.dev",
+  "bugs": {
+    "url": "https://github.com/hakanngul/testfly-playwright/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "type": "module",
+  "bin": {
+    "create-testfly": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "templates",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "testfly",
+    "playwright",
+    "scaffold",
+    "create"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint:package": "publint"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsup": "^8.5.1",
+    "typescript": "~5.9.3",
+    "vitest": "^5.0.4"
+  }
+}

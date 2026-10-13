@@ -1,0 +1,85 @@
+{
+  "name": "@testfly/ai",
+  "version": "0.2.0-next.0",
+  "description": "AI layer for TestFly Playwright: act(), byIntent(), semantic assertions, AI self-healing and failure analysis with deterministic replay caching.",
+  "license": "Apache-2.0",
+  "author": "Hakan G\u00fcl",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hakanngul/testfly-playwright.git"
+  },
+  "homepage": "https://testfly.dev",
+  "bugs": {
+    "url": "https://github.com/hakanngul/testfly-playwright/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    },
+    "./reporter": {
+      "import": {
+        "types": "./dist/reporter.d.mts",
+        "default": "./dist/reporter.mjs"
+      },
+      "require": {
+        "types": "./dist/reporter.d.ts",
+        "default": "./dist/reporter.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "playwright",
+    "ai",
+    "llm",
+    "agentic-testing",
+    "self-healing",
+    "testfly"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint:package": "publint && attw --pack . --profile node16"
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
+  },
+  "peerDependencies": {
+    "@playwright/test": ">=1.50.0 <2",
+    "@testfly/playwright": "workspace:^"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.0",
+    "@testfly/playwright": "workspace:*",
+    "@testfly/reporter": "workspace:*",
+    "@types/node": "^22.10.0",
+    "tsup": "^8.5.1",
+    "typescript": "~5.9.3",
+    "vitest": "^5.0.4"
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "name": "@testfly/reporter",
+  "version": "0.2.0-next.0",
+  "description": "Playwright reporter with run history, Flakiness Radar, smart failure triage, quarantine, quality gates and LPT sharding.",
+  "license": "Apache-2.0",
+  "author": "Hakan G\u00fcl",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hakanngul/testfly-playwright.git"
+  },
+  "homepage": "https://testfly.dev",
+  "bugs": {
+    "url": "https://github.com/hakanngul/testfly-playwright/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    },
+    "./schema": {
+      "import": {
+        "types": "./dist/schema.d.mts",
+        "default": "./dist/schema.mjs"
+      },
+      "require": {
+        "types": "./dist/schema.d.ts",
+        "default": "./dist/schema.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "playwright",
+    "reporter",
+    "flaky-tests",
+    "quarantine",
+    "sharding",
+    "dashboard",
+    "testfly"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint:package": "publint && attw --pack . --profile node16"
+  },
+  "dependencies": {
+    "yaml": "^2.9.1",
+    "zod": "^4.6.7"
+  },
+  "peerDependencies": {
+    "@playwright/test": ">=1.50.0 <2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.0",
+    "@types/node": "^22.10.0",
+    "tsup": "^8.5.1",
+    "typescript": "~5.9.3",
+    "vitest": "^5.0.4"
+  }
+}
