@@ -1,0 +1,31 @@
+import { defineConfig } from '../src/entries/config';
+
+// Integration suite for the TestFly fixtures. Imports the package SOURCE directly (Playwright's TS loader
+// compiles it on the fly); the same code is what ships in dist/.
+const executablePath = process.env.PW_CHROMIUM_PATH ?? '/opt/pw-browsers/chromium';
+
+export default defineConfig({
+  testDir: '.',
+  testMatch: '**/*.spec.ts',
+  globalSetup: './support/global-setup.ts',
+  fullyParallel: true,
+  workers: 2,
+  retries: 0,
+  reporter: [['list']],
+  use: { launchOptions: { executablePath } },
+  testfly: {
+    reporter: { enabled: false },
+    locators: { dir: 'locators' },
+    timeouts: { poll: 2000, pollInterval: 50 },
+  },
+  projects: [
+    { name: 'main', testMatch: /(core|api|locate|quality|quarantine|session)\.spec\.ts$/ },
+    {
+      name: 'data',
+      testMatch: /data\.spec\.ts$/,
+      use: { testfly: { db: { client: 'mock' }, mail: { provider: 'mock' }, timeouts: { poll: 400, pollInterval: 50 } } },
+    },
+    // Every test in these specs is expected to FAIL (test.fail()); the vitest suite checks the error codes.
+    { name: 'unconfigured', testMatch: /unconfigured\.spec\.ts$/ },
+  ],
+});

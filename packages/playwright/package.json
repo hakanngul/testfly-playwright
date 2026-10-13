@@ -111,6 +111,7 @@
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:e2e": "playwright test -c e2e",
     "lint:package": "publint && attw --pack . --profile node16"
   },
   "dependencies": {

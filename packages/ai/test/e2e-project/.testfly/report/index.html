@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TestFly Report</title>
+<style>
+:root{
+  --bg:#f6f7f9;--panel:#fff;--text:#1b1f24;--muted:#667085;--border:#e1e4e8;
+  --pass:#1a7f4b;--fail:#c62828;--warn:#b26a00;--info:#1f5fbf;--skip:#8a94a3;--accent:#4f46e5;
+  --pass-bg:#e4f5ec;--fail-bg:#fdeaea;--warn-bg:#fff3dc;--info-bg:#e6effc;--skip-bg:#eceff3;
+  --code:#f0f2f5;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1318;--panel:#171c23;--text:#e6e9ee;--muted:#98a2b3;--border:#2a323d;
+    --pass:#4cc38a;--fail:#ff7b72;--warn:#e3b341;--info:#79b0ff;--skip:#8a94a3;--accent:#8b8cf8;
+    --pass-bg:#12301f;--fail-bg:#3a1a1a;--warn-bg:#38290a;--info-bg:#14264a;--skip-bg:#222a34;
+    --code:#10151b;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1318;--panel:#171c23;--text:#e6e9ee;--muted:#98a2b3;--border:#2a323d;
+  --pass:#4cc38a;--fail:#ff7b72;--warn:#e3b341;--info:#79b0ff;--skip:#8a94a3;--accent:#8b8cf8;
+  --pass-bg:#12301f;--fail-bg:#3a1a1a;--warn-bg:#38290a;--info-bg:#14264a;--skip-bg:#222a34;
+  --code:#10151b;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.muted{color:var(--muted)}
+.top{display:flex;align-items:center;gap:16px;padding:10px 20px;background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:5;flex-wrap:wrap}
+.brand{font-weight:700;font-size:16px}
+nav{display:flex;gap:4px;flex:1;flex-wrap:wrap}
+nav button{background:none;border:0;color:var(--muted);padding:6px 12px;border-radius:6px;cursor:pointer;font:inherit}
+nav button[aria-selected="true"]{background:var(--accent);color:#fff}
+button.ghost,.btn{background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 10px;cursor:pointer;font:inherit}
+.btn:hover,button.ghost:hover{border-color:var(--accent)}
+main{max-width:1200px;margin:0 auto;padding:20px}
+.view[hidden]{display:none}
+.grid{display:grid;gap:16px}
+.cols-2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.card h3{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.stat .n{font-size:26px;font-weight:700}
+.stat .l{color:var(--muted);font-size:12px}
+.pass{color:var(--pass)}.fail{color:var(--fail)}.warn{color:var(--warn)}.info{color:var(--info)}
+.badge{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600;margin-right:4px;white-space:nowrap}
+.b-passed,.b-STABLE{background:var(--pass-bg);color:var(--pass)}
+.b-failed,.b-timedOut,.b-interrupted,.b-HIGH,.b-APPLICATION_BUG{background:var(--fail-bg);color:var(--fail)}
+.b-flaky,.b-WATCH,.b-SYSTEM_FLAKY{background:var(--warn-bg);color:var(--warn)}
+.b-healed,.b-TEST_BUG{background:var(--info-bg);color:var(--info)}
+.b-skipped,.b-quarantined,.b-NEEDS_INVESTIGATION{background:var(--skip-bg);color:var(--skip)}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--border);vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:600}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+input[type=search],select{background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 9px;font:inherit}
+input[type=search]{min-width:240px}
+.row{background:var(--panel);border:1px solid var(--border);border-radius:8px;margin-bottom:6px}
+.row>.head{display:flex;gap:10px;align-items:center;padding:8px 12px;cursor:pointer;flex-wrap:wrap}
+.row>.head:hover{background:var(--code)}
+.row .title{flex:1;min-width:200px;font-weight:600}
+.row .file{color:var(--muted);font-size:12px}
+.detail{padding:4px 14px 14px;border-top:1px solid var(--border)}
+.detail h4{margin:14px 0 6px;font-size:12px;text-transform:uppercase;color:var(--muted);letter-spacing:.04em}
+pre{background:var(--code);border-radius:6px;padding:10px;overflow:auto;max-height:320px;margin:0;font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-word}
+.tl{list-style:none;margin:0;padding:0}
+.tl li{display:grid;grid-template-columns:70px 14px 1fr;gap:8px;align-items:center;padding:2px 0}
+.tl .dot{width:10px;height:10px;border-radius:50%;background:var(--info)}
+.tl .l-pass{background:var(--pass)}.tl .l-fail{background:var(--fail)}.tl .l-warn{background:var(--warn)}
+.bar{height:8px;border-radius:4px;background:var(--accent);min-width:2px}
+.bar-track{background:var(--code);border-radius:4px;height:8px;width:100%}
+.kv{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;margin:0}
+.kv dt{color:var(--muted)}.kv dd{margin:0;word-break:break-all}
+a{color:var(--accent)}
+code{background:var(--code);padding:1px 5px;border-radius:4px;font-size:12px}
+.empty{padding:24px;text-align:center;color:var(--muted)}
+svg text{fill:var(--muted);font-size:10px}
+@media (max-width:640px){main{padding:12px}.top{padding:8px 12px}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">TestFly <span class="muted">report</span></div>
+  <nav id="tabs" role="tablist">
+    <button role="tab" data-tab="overview">Overview</button>
+    <button role="tab" data-tab="tests">Tests</button>
+    <button role="tab" data-tab="radar">Flakiness Radar</button>
+    <button role="tab" data-tab="history">History</button>
+    <button role="tab" data-tab="heals">Heals</button>
+  </nav>
+  <button id="theme" class="ghost" title="Toggle light/dark theme" aria-label="Toggle theme">Theme</button>
+</header>
+<main>
+  <section id="view-overview" class="view" role="tabpanel"></section>
+  <section id="view-tests" class="view" role="tabpanel" hidden></section>
+  <section id="view-radar" class="view" role="tabpanel" hidden></section>
+  <section id="view-history" class="view" role="tabpanel" hidden></section>
+  <section id="view-heals" class="view" role="tabpanel" hidden></section>
+</main>
+<script type="application/json" id="tf-data">{"generatedAt":1791931884161,"latest":{"schemaVersion":1,"runId":"2026-10-13T22-51-05-461Z-zi1ow5","startedAt":1791931865461,"durationMs":18957,"status":"failed","env":"local","playwrightVersion":"1.64.0","totals":{"total":9,"passed":1,"failed":8,"flaky":0,"skipped":0,"quarantined":0,"healed":0},"tests":[{"id":"::matchers.pw.ts::page toSatisfyAi passes","title":"page toSatisfyAi passes","titlePath":["page toSatisfyAi passes"],"file":"matchers.pw.ts","line":7,"project":"","tags":[],"status":"failed","flaky":false,"quarantined":false,"retries":0,"durationMs":494,"error":{"message":"TestFlyError: [TF_FEATURE_DISABLED] AI assertions are not available in ai.mode=\"replay\".\n  → AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.\n  ↪ https://testfly.dev/docs/playwright/errors#tf-feature-disabled","stack":"TestFlyError: [TF_FEATURE_DISABLED] AI assertions are not available in ai.mode=\"replay\".\n  → AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.\n  ↪ https://testfly.dev/docs/playwright/errors#tf-feature-disabled\n    at judge (/home/claude/testfly-playwright/packages/ai/src/assertions/matchers.ts:38:11)\n    at Object.\u003canonymous\u003e (/home/claude/testfly-playwright/packages/ai/src/assertions/matchers.ts:59:36)\n    at /home/claude/testfly-playwright/packages/ai/test/e2e-project/matchers.pw.ts:9:22","snippet":"   at ../../src/assertions/matchers.ts:38\n\n  36 |   if (!runtime.live) {\n  37 |     // Assertions are never cached: replay must not silently pass or skip.\n\u003e 38 |     throw new TestFlyError('TF_FEATURE_DISABLED', 'AI assertions are not available in ai.mode=\"replay\".', {\n     |           ^\n  39 |       hint: 'AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.',\n  40 |     });\n  41 |   }"},"triage":"NEEDS_INVESTIGATION","heals":[],"steps":[],"api":[],"ai":[],"artifacts":[]},{"id":"::matchers.pw.ts::page toViolateAi passes when the model says violated","title":"page toViolateAi passes when the model says violated","titlePath":["page toViolateAi passes when the model says violated"],"file":"matchers.pw.ts","line":12,"project":"","tags":[],"status":"failed","flaky":false,"quarantined":false,"retries":0,"durationMs":353,"error":{"message":"TestFlyError: [TF_FEATURE_DISABLED] AI assertions are not available in ai.mode=\"replay\".\n  → AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.\n  ↪ https://testfly.dev/docs/playwright/errors#tf-feature-disabled","stack":"TestFlyError: [TF_FEATURE_DISABLED] AI assertions are not available in ai.mode=\"replay\".\n  → AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.\n  ↪ https://testfly.dev/docs/playwright/errors#tf-feature-disabled\n    at judge (/home/claude/testfly-playwright/packages/ai/src/assertions/matchers.ts:38:11)\n    at Object.\u003canonymous\u003e (/home/claude/testfly-playwright/packages/ai/src/assertions/matchers.ts:59:36)\n    at /home/claude/testfly-playwright/packages/ai/test/e2e-project/matchers.pw.ts:14:22","snippet":"   at ../../src/assertions/matchers.ts:38\n\n  36 |   if (!runtime.live) {\n  37 |     // Assertions are never cached: replay must not silently pass or skip.\n\u003e 38 |     throw new TestFlyError('TF_FEATURE_DISABLED', 'AI assertions are not available in ai.mode=\"replay\".', {\n     |           ^\n  39 |       hint: 'AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.',\n  40 |     });\n  41 |   }"},"triage":"NEEDS_INVESTIGATION","heals":[],"steps":[],"api":[],"ai":[],"artifacts":[]},{"id":"::matchers.pw.ts::locator scope is sent to the model","title":"locator scope is sent to the model","titlePath":["locator scope is sent to the model"],"file":"matchers.pw.ts","line":17,"project":"","tags":[],"status":"failed","flaky":false,"quarantined":false,"retries":0,"durationMs":473,"error":{"message":"TestFlyError: [TF_FEATURE_DISABLED] AI assertions are not available in ai.mode=\"replay\".\n  → AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.\n  ↪ https://testfly.dev/docs/playwright/errors#tf-feature-disabled","stack":"TestFlyError: [TF_FEATURE_DISABLED] AI assertions are not available in ai.mode=\"replay\".\n  → AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.\n  ↪ https://testfly.dev/docs/playwright/errors#tf-feature-disabled\n    at judge (/home/claude/testfly-playwright/packages/ai/src/assertions/matchers.ts:38:11)\n    at Object.\u003canonymous\u003e (/home/claude/testfly-playwright/packages/ai/src/assertions/matchers.ts:59:36)\n    at /home/claude/testfly-playwright/packages/ai/test/e2e-project/matchers.pw.ts:19:36","snippet":"   at ../../src/assertions/matchers.ts:38\n\n  36 |   if (!runtime.live) {\n  37 |     // Assertions are never cached: replay must not silently pass or skip.\n\u003e 38 |     throw new TestFlyError('TF_FEATURE_DISABLED', 'AI assertions are not available in ai.mode=\"replay\".', {\n     |           ^\n  39 |       hint: 'AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.',\n  40 |     });\n  41 |   }"},"triage":"NEEDS_INVESTIGATION","heals":[],"steps":[],"api":[],"ai":[],"artifacts":[]},{"id":"::matchers.pw.ts::failing toSatisfyAi message contains the reason","title":"failing toSatisfyAi message contains the reason","titlePath":["failing toSatisfyAi message contains the reason"],"file":"matchers.pw.ts","line":22,"project":"","tags":[],"status":"failed","flaky":false,"quarantined":false,"retries":0,"durationMs":546,"error":{"message":"Error: bad message: [TF_FEATURE_DISABLED] AI assertions are not available in ai.mode=\"replay\".\n  → AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.\n  ↪ https://testfly.dev/docs/playwright/errors#tf-feature-disabled","stack":"Error: bad message: [TF_FEATURE_DISABLED] AI assertions are not available in ai.mode=\"replay\".\n  → AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.\n  ↪ https://testfly.dev/docs/playwright/errors#tf-feature-disabled\n    at /home/claude/testfly-playwright/packages/ai/test/e2e-project/matchers.pw.ts:29:129","snippet":"  27 |   );\n  28 |   if (!err) throw new Error('expected rejection');\n\u003e 29 |   if (!/Expected page to satisfy: \"FAILME please\"/.test(err.message) || !/AI verdict: fake-reason-bad/.test(err.message)) throw new Error(`bad message: ${err.message}`);\n     |                                                                                                                                 ^\n  30 | });\n  31 |\n  32 | test('failing toViolateAi on locator message', async ({ page }) =\u003e {"},"triage":"NEEDS_INVESTIGATION","heals":[],"steps":[],"api":[],"ai":[],"artifacts":[]},{"id":"::matchers.pw.ts::failing toViolateAi on locator message","title":"failing toViolateAi on locator message","titlePath":["failing toViolateAi on locator message"],"file":"matchers.pw.ts","line":32,"project":"","tags":[],"status":"failed","flaky":false,"quarantined":false,"retries":0,"durationMs":341,"error":{"message":"Error: bad message: [TF_FEATURE_DISABLED] AI assertions are not available in ai.mode=\"replay\".\n  → AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.\n  ↪ https://testfly.dev/docs/playwright/errors#tf-feature-disabled","stack":"Error: bad message: [TF_FEATURE_DISABLED] AI assertions are not available in ai.mode=\"replay\".\n  → AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.\n  ↪ https://testfly.dev/docs/playwright/errors#tf-feature-disabled\n    at /home/claude/testfly-playwright/packages/ai/test/e2e-project/matchers.pw.ts:39:112","snippet":"  37 |   );\n  38 |   if (!err) throw new Error('expected rejection');\n\u003e 39 |   if (!/Expected locator to violate: \"fine\"/.test(err.message) || !/fake-reason-good/.test(err.message)) throw new Error(`bad message: ${err.message}`);\n     |                                                                                                                ^\n  40 | });\n  41 |\n  42 | test('.not variants', async ({ page }) =\u003e {"},"triage":"NEEDS_INVESTIGATION","heals":[],"steps":[],"api":[],"ai":[],"artifacts":[]},{"id":"::matchers.pw.ts::.not variants","title":".not variants","titlePath":[".not variants"],"file":"matchers.pw.ts","line":42,"project":"","tags":[],"status":"failed","flaky":false,"quarantined":false,"retries":0,"durationMs":270,"error":{"message":"TestFlyError: [TF_FEATURE_DISABLED] AI assertions are not available in ai.mode=\"replay\".\n  → AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.\n  ↪ https://testfly.dev/docs/playwright/errors#tf-feature-disabled","stack":"TestFlyError: [TF_FEATURE_DISABLED] AI assertions are not available in ai.mode=\"replay\".\n  → AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.\n  ↪ https://testfly.dev/docs/playwright/errors#tf-feature-disabled\n    at judge (/home/claude/testfly-playwright/packages/ai/src/assertions/matchers.ts:38:11)\n    at Object.\u003canonymous\u003e (/home/claude/testfly-playwright/packages/ai/src/assertions/matchers.ts:59:36)\n    at /home/claude/testfly-playwright/packages/ai/test/e2e-project/matchers.pw.ts:44:26","snippet":"   at ../../src/assertions/matchers.ts:38\n\n  36 |   if (!runtime.live) {\n  37 |     // Assertions are never cached: replay must not silently pass or skip.\n\u003e 38 |     throw new TestFlyError('TF_FEATURE_DISABLED', 'AI assertions are not available in ai.mode=\"replay\".', {\n     |           ^\n  39 |       hint: 'AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.',\n  40 |     });\n  41 |   }"},"triage":"NEEDS_INVESTIGATION","heals":[],"steps":[],"api":[],"ai":[],"artifacts":[]},{"id":"::matchers.pw.ts::expect.soft records but does not stop","title":"expect.soft records but does not stop","titlePath":["expect.soft records but does not stop"],"file":"matchers.pw.ts","line":53,"project":"","tags":[],"status":"failed","flaky":false,"quarantined":false,"retries":0,"durationMs":336,"error":{"message":"TestFlyError: [TF_FEATURE_DISABLED] AI assertions are not available in ai.mode=\"replay\".\n  → AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.\n  ↪ https://testfly.dev/docs/playwright/errors#tf-feature-disabled","stack":"TestFlyError: [TF_FEATURE_DISABLED] AI assertions are not available in ai.mode=\"replay\".\n  → AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.\n  ↪ https://testfly.dev/docs/playwright/errors#tf-feature-disabled\n    at judge (/home/claude/testfly-playwright/packages/ai/src/assertions/matchers.ts:38:11)\n    at Object.\u003canonymous\u003e (/home/claude/testfly-playwright/packages/ai/src/assertions/matchers.ts:59:36)\n    at /home/claude/testfly-playwright/packages/ai/test/e2e-project/matchers.pw.ts:55:27","snippet":"   at ../../src/assertions/matchers.ts:38\n\n  36 |   if (!runtime.live) {\n  37 |     // Assertions are never cached: replay must not silently pass or skip.\n\u003e 38 |     throw new TestFlyError('TF_FEATURE_DISABLED', 'AI assertions are not available in ai.mode=\"replay\".', {\n     |           ^\n  39 |       hint: 'AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.',\n  40 |     });\n  41 |   }"},"triage":"NEEDS_INVESTIGATION","heals":[],"steps":[],"api":[],"ai":[],"artifacts":[]},{"id":"::matchers.pw.ts::ai fixture: act + byIntent + assert","title":"ai fixture: act + byIntent + assert","titlePath":["ai fixture: act + byIntent + assert"],"file":"matchers.pw.ts","line":59,"project":"","tags":[],"status":"failed","flaky":false,"quarantined":false,"retries":0,"durationMs":361,"error":{"message":"TestFlyError: [TF_FEATURE_DISABLED] AI assertions are not available in ai.mode=\"replay\".\n  → AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.\n  ↪ https://testfly.dev/docs/playwright/errors#tf-feature-disabled","stack":"TestFlyError: [TF_FEATURE_DISABLED] AI assertions are not available in ai.mode=\"replay\".\n  → AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.\n  ↪ https://testfly.dev/docs/playwright/errors#tf-feature-disabled\n    at judge (/home/claude/testfly-playwright/packages/ai/src/assertions/matchers.ts:38:11)\n    at Object.\u003canonymous\u003e (/home/claude/testfly-playwright/packages/ai/src/assertions/matchers.ts:59:36)\n    at Object.assertFn (/home/claude/testfly-playwright/packages/ai/src/index.ts:37:45)\n    at run (/home/claude/testfly-playwright/packages/ai/src/agent/agent.ts:68:33)","snippet":"   at ../../src/assertions/matchers.ts:38\n\n  36 |   if (!runtime.live) {\n  37 |     // Assertions are never cached: replay must not silently pass or skip.\n\u003e 38 |     throw new TestFlyError('TF_FEATURE_DISABLED', 'AI assertions are not available in ai.mode=\"replay\".', {\n     |           ^\n  39 |       hint: 'AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.',\n  40 |     });\n  41 |   }"},"triage":"NEEDS_INVESTIGATION","heals":[],"steps":[],"api":[],"ai":[{"feature":"act","goal":"press the go button","cache":"hit","durationMs":92},{"feature":"byIntent","goal":"go button","cache":"hit","durationMs":7}],"artifacts":[]},{"id":"::matchers.pw.ts::no runtime -\u003e TF_AI_NOT_CONFIGURED","title":"no runtime -\u003e TF_AI_NOT_CONFIGURED","titlePath":["no runtime -\u003e TF_AI_NOT_CONFIGURED"],"file":"matchers.pw.ts","line":70,"project":"","tags":[],"status":"passed","flaky":false,"quarantined":false,"retries":0,"durationMs":258,"heals":[],"steps":[],"api":[],"ai":[],"artifacts":[]}]},"history":[{"runId":"2026-10-13T22-47-20-832Z-za1z96","startedAt":1791931640832,"durationMs":7989,"status":"failed","passRate":77.8,"totals":{"total":9,"passed":7,"failed":2,"flaky":0,"skipped":0,"quarantined":0,"healed":0}},{"runId":"2026-10-13T22-47-28-390Z-0lqj1h","startedAt":1791931648390,"durationMs":15200,"status":"failed","passRate":11.1,"totals":{"total":9,"passed":1,"failed":8,"flaky":0,"skipped":0,"quarantined":0,"healed":0}},{"runId":"2026-10-13T22-47-45-216Z-gk8ppk","startedAt":1791931665216,"durationMs":24603,"status":"failed","passRate":11.1,"totals":{"total":9,"passed":1,"failed":8,"flaky":0,"skipped":0,"quarantined":0,"healed":0}},{"runId":"2026-10-13T22-48-12-722Z-iqvl82","startedAt":1791931692722,"durationMs":13354,"status":"failed","passRate":77.8,"totals":{"total":9,"passed":7,"failed":2,"flaky":0,"skipped":0,"quarantined":0,"healed":0}},{"runId":"2026-10-13T22-48-28-151Z-aoilzm","startedAt":1791931708151,"durationMs":39381,"status":"failed","passRate":11.1,"totals":{"total":9,"passed":1,"failed":8,"flaky":0,"skipped":0,"quarantined":0,"healed":0}},{"runId":"2026-10-13T22-49-10-602Z-q0nv8e","startedAt":1791931750602,"durationMs":5647,"status":"failed","passRate":0,"totals":{"total":1,"passed":0,"failed":1,"flaky":0,"skipped":0,"quarantined":0,"healed":0}},{"runId":"2026-10-13T22-49-25-169Z-j2381y","startedAt":1791931765169,"durationMs":14832,"status":"failed","passRate":88.9,"totals":{"total":9,"passed":8,"failed":1,"flaky":0,"skipped":0,"quarantined":0,"healed":0}},{"runId":"2026-10-13T22-49-41-657Z-vl3mr0","startedAt":1791931781657,"durationMs":29962,"status":"failed","passRate":11.1,"totals":{"total":9,"passed":1,"failed":8,"flaky":0,"skipped":0,"quarantined":0,"healed":0}},{"runId":"2026-10-13T22-50-13-999Z-nkvp9l","startedAt":1791931813999,"durationMs":19769,"status":"failed","passRate":11.1,"totals":{"total":9,"passed":1,"failed":8,"flaky":0,"skipped":0,"quarantined":0,"healed":0}},{"runId":"2026-10-13T22-50-34-660Z-qx35n0","startedAt":1791931834660,"durationMs":8802,"status":"failed","passRate":88.9,"totals":{"total":9,"passed":8,"failed":1,"flaky":0,"skipped":0,"quarantined":0,"healed":0}},{"runId":"2026-10-13T22-50-45-359Z-534kd0","startedAt":1791931845359,"durationMs":3515,"status":"failed","passRate":0,"totals":{"total":1,"passed":0,"failed":1,"flaky":0,"skipped":0,"quarantined":0,"healed":0}},{"runId":"2026-10-13T22-50-56-607Z-649fhc","startedAt":1791931856607,"durationMs":7782,"status":"failed","passRate":88.9,"totals":{"total":9,"passed":8,"failed":1,"flaky":0,"skipped":0,"quarantined":0,"healed":0}},{"runId":"2026-10-13T22-51-05-461Z-zi1ow5","startedAt":1791931865461,"durationMs":18957,"status":"failed","passRate":11.1,"totals":{"total":9,"passed":1,"failed":8,"flaky":0,"skipped":0,"quarantined":0,"healed":0}}],"flakiness":[{"id":"::failing.pw.ts::deliberately failing test","title":"deliberately failing test","runs":2,"failures":2,"flakyRuns":0,"failureRate":1,"risk":"HIGH","avgDurationMs":1046},{"id":"::matchers.pw.ts::expect.soft records but does not stop","title":"expect.soft records but does not stop","runs":11,"failures":11,"flakyRuns":0,"failureRate":1,"risk":"HIGH","avgDurationMs":386},{"id":"::matchers.pw.ts::ai fixture: act + byIntent + assert","title":"ai fixture: act + byIntent + assert","runs":11,"failures":8,"flakyRuns":0,"failureRate":0.727,"risk":"HIGH","avgDurationMs":520},{"id":"::matchers.pw.ts::.not variants","title":".not variants","runs":11,"failures":6,"flakyRuns":0,"failureRate":0.545,"risk":"HIGH","avgDurationMs":377},{"id":"::matchers.pw.ts::failing toSatisfyAi message contains the reason","title":"failing toSatisfyAi message contains the reason","runs":11,"failures":6,"flakyRuns":0,"failureRate":0.545,"risk":"HIGH","avgDurationMs":368},{"id":"::matchers.pw.ts::failing toViolateAi on locator message","title":"failing toViolateAi on locator message","runs":11,"failures":6,"flakyRuns":0,"failureRate":0.545,"risk":"HIGH","avgDurationMs":371},{"id":"::matchers.pw.ts::locator scope is sent to the model","title":"locator scope is sent to the model","runs":11,"failures":6,"flakyRuns":0,"failureRate":0.545,"risk":"HIGH","avgDurationMs":385},{"id":"::matchers.pw.ts::page toSatisfyAi passes","title":"page toSatisfyAi passes","runs":11,"failures":6,"flakyRuns":0,"failureRate":0.545,"risk":"HIGH","avgDurationMs":580},{"id":"::matchers.pw.ts::page toViolateAi passes when the model says violated","title":"page toViolateAi passes when the model says violated","runs":11,"failures":6,"flakyRuns":0,"failureRate":0.545,"risk":"HIGH","avgDurationMs":364},{"id":"::matchers.pw.ts::no runtime -\u003e TF_AI_NOT_CONFIGURED","title":"no runtime -\u003e TF_AI_NOT_CONFIGURED","runs":11,"failures":0,"flakyRuns":0,"failureRate":0,"risk":"STABLE","avgDurationMs":422}],"heals":[]}</script>
+<script>
+(function () {
+  'use strict';
+  var D = JSON.parse(document.getElementById('tf-data').textContent);
+  var latest = D.latest;
+  var SVG = 'http://www.w3.org/2000/svg';
+
+  // ---------- helpers ----------
+  function h(tag, props, children) {
+    var el = document.createElement(tag);
+    props = props || {};
+    Object.keys(props).forEach(function (k) {
+      var v = props[k];
+      if (v === undefined || v === null || v === false) return;
+      if (k === 'class') el.className = v;
+      else if (k === 'text') el.textContent = v;
+      else if (k.slice(0, 2) === 'on') el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v === true ? '' : v);
+    });
+    add(el, children);
+    return el;
+  }
+  function add(el, children) {
+    (Array.isArray(children) ? children : children === undefined ? [] : [children]).forEach(function (c) {
+      if (c === null || c === undefined || c === false) return;
+      el.appendChild(typeof c === 'string' || typeof c === 'number' ? document.createTextNode(String(c)) : c);
+    });
+  }
+  function s(tag, attrs, children) {
+    var el = document.createElementNS(SVG, tag);
+    Object.keys(attrs || {}).forEach(function (k) { el.setAttribute(k, attrs[k]); });
+    add(el, children);
+    return el;
+  }
+  function badge(text, cls) { return h('span', { class: 'badge b-' + (cls || text), text: text }); }
+  function fmtMs(ms) {
+    if (ms < 1000) return Math.round(ms) + ' ms';
+    if (ms < 60000) return (ms / 1000).toFixed(1) + ' s';
+    return Math.floor(ms / 60000) + 'm ' + Math.round((ms % 60000) / 1000) + 's';
+  }
+  function fmtDate(t) { return new Date(t).toLocaleString(); }
+  function pct(x) { return (x * 100).toFixed(0) + '%'; }
+  function clear(el) { while (el.firstChild) el.removeChild(el.firstChild); return el; }
+  function empty(text) { return h('div', { class: 'empty', text: text }); }
+  function copy(text, btn) {
+    function done() { if (btn) { var o = btn.textContent; btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = o; }, 1200); } }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, fallback); return; }
+    } catch (e) { /* fall through */ }
+    fallback();
+    function fallback() {
+      var ta = h('textarea', { style: 'position:fixed;opacity:0' });
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch (e) { /* ignore */ }
+      document.body.removeChild(ta);
+    }
+  }
+  function curlFor(a) {
+    if (a.curl) return a.curl;
+    var c = "curl -X " + a.method + " '" + a.url.replace(/'/g, "'\\''") + "'";
+    if (a.requestBody) c += " -H 'Content-Type: application/json' -d '" + a.requestBody.replace(/'/g, "'\\''") + "'";
+    return c;
+  }
+  var flakyById = {};
+  D.flakiness.forEach(function (f) { flakyById[f.id] = f; });
+
+  // ---------- theme & tabs ----------
+  var root = document.documentElement;
+  try { var saved = localStorage.getItem('tf-theme'); if (saved) root.setAttribute('data-theme', saved); } catch (e) { /* ignore */ }
+  document.getElementById('theme').addEventListener('click', function () {
+    var dark = root.getAttribute('data-theme') === 'dark' ||
+      (!root.getAttribute('data-theme') && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    var next = dark ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('tf-theme', next); } catch (e) { /* ignore */ }
+  });
+  var tabs = ['overview', 'tests', 'radar', 'history', 'heals'];
+  function showTab(name) {
+    if (tabs.indexOf(name) < 0) name = 'overview';
+    tabs.forEach(function (t) {
+      document.getElementById('view-' + t).hidden = t !== name;
+      document.querySelector('[data-tab="' + t + '"]').setAttribute('aria-selected', String(t === name));
+    });
+    if (location.hash !== '#' + name) history.replaceState(null, '', '#' + name);
+  }
+  document.getElementById('tabs').addEventListener('click', function (e) {
+    var t = e.target && e.target.getAttribute && e.target.getAttribute('data-tab');
+    if (t) showTab(t);
+  });
+
+  // ---------- Overview ----------
+  function ring(rate, color) {
+    var r = 52, c = 2 * Math.PI * r;
+    return s('svg', { viewBox: '0 0 140 140', width: '140', height: '140', role: 'img', 'aria-label': 'Pass rate ' + rate.toFixed(1) + '%' }, [
+      s('circle', { cx: 70, cy: 70, r: r, fill: 'none', stroke: 'var(--code)', 'stroke-width': 14 }),
+      s('circle', { cx: 70, cy: 70, r: r, fill: 'none', stroke: color, 'stroke-width': 14, 'stroke-linecap': 'round',
+        'stroke-dasharray': (c * rate / 100) + ' ' + c, transform: 'rotate(-90 70 70)' }),
+      s('text', { x: 70, y: 76, 'text-anchor': 'middle', style: 'font-size:24px;font-weight:700;fill:var(--text)' }, rate.toFixed(1) + '%')
+    ]);
+  }
+  function stat(n, label, cls) {
+    return h('div', { class: 'card stat' }, [h('div', { class: 'n ' + (cls || ''), text: String(n) }), h('div', { class: 'l', text: label })]);
+  }
+  function renderOverview() {
+    var el = clear(document.getElementById('view-overview'));
+    var t = latest.totals, executed = t.passed + t.failed;
+    var rate = executed === 0 ? 100 : t.passed / executed * 100;
+    var color = rate >= 95 ? 'var(--pass)' : rate >= 80 ? 'var(--warn)' : 'var(--fail)';
+    var top = h('div', { class: 'grid cols-2' });
+    top.appendChild(h('div', { class: 'card', style: 'display:flex;gap:20px;align-items:center;flex-wrap:wrap' }, [
+      ring(rate, color),
+      h('div', {}, [
+        h('div', {}, [badge(latest.status, latest.status === 'passed' ? 'passed' : 'failed')]),
+        h('dl', { class: 'kv' }, [
+          h('dt', { text: 'Started' }), h('dd', { text: fmtDate(latest.startedAt) }),
+          h('dt', { text: 'Duration' }), h('dd', { text: fmtMs(latest.durationMs) }),
+          latest.env ? h('dt', { text: 'Env' }) : null, latest.env ? h('dd', { text: latest.env }) : null,
+          latest.shard ? h('dt', { text: 'Shard' }) : null, latest.shard ? h('dd', { text: latest.shard.current + '/' + latest.shard.total }) : null,
+          latest.playwrightVersion ? h('dt', { text: 'Playwright' }) : null, latest.playwrightVersion ? h('dd', { text: latest.playwrightVersion }) : null
+        ])
+      ])
+    ]));
+    top.appendChild(h('div', { class: 'cards' }, [
+      stat(t.total, 'total'), stat(t.passed, 'passed', 'pass'), stat(t.failed, 'failed', t.failed ? 'fail' : ''),
+      stat(t.flaky, 'flaky', t.flaky ? 'warn' : ''), stat(t.healed, 'healed', t.healed ? 'info' : ''),
+      stat(t.quarantined, 'quarantined'), stat(t.skipped, 'skipped')
+    ]));
+    el.appendChild(top);
+
+    var slow = latest.tests.filter(function (x) { return x.status !== 'skipped' && !x.quarantined; })
+      .sort(function (a, b) { return b.durationMs - a.durationMs; }).slice(0, 10);
+    var max = slow.length ? slow[0].durationMs || 1 : 1;
+    var slowCard = h('div', { class: 'card' }, [h('h3', { text: 'Slowest 10 tests' })]);
+    if (!slow.length) slowCard.appendChild(empty('No executed tests.'));
+    slow.forEach(function (x) {
+      slowCard.appendChild(h('div', { style: 'margin-bottom:8px' }, [
+        h('div', { style: 'display:flex;justify-content:space-between;gap:8px' }, [h('span', { text: x.title }), h('span', { class: 'muted', text: fmtMs(x.durationMs) })]),
+        h('div', { class: 'bar-track' }, h('div', { class: 'bar', style: 'width:' + (x.durationMs / max * 100) + '%' }))
+      ]));
+    });
+    var ciCard = h('div', { class: 'card' }, [h('h3', { text: 'CI' })]);
+    var ci = latest.ci;
+    if (!ci) ciCard.appendChild(empty('Not running in CI (no provider detected).'));
+    else {
+      var dl = h('dl', { class: 'kv' });
+      [['Provider', ci.provider], ['Repository', ci.repository], ['Branch', ci.branch], ['Commit', ci.commitSha ? ci.commitSha.slice(0, 10) : ''],
+        ['PR', ci.pullRequest], ['Build', ci.buildNumber || ci.buildId], ['Job', ci.jobName], ['Actor', ci.actor]].forEach(function (p) {
+        if (p[1]) { dl.appendChild(h('dt', { text: p[0] })); dl.appendChild(h('dd', { text: String(p[1]) })); }
+      });
+      if (ci.buildUrl && /^https?:\/\//.test(ci.buildUrl)) {
+        dl.appendChild(h('dt', { text: 'URL' })); dl.appendChild(h('dd', {}, h('a', { href: ci.buildUrl, target: '_blank', rel: 'noopener noreferrer', text: ci.buildUrl })));
+      }
+      ciCard.appendChild(dl);
+    }
+    el.appendChild(h('div', { class: 'grid cols-2', style: 'margin-top:16px' }, [slowCard, ciCard]));
+  }
+
+  // ---------- Tests ----------
+  var F = { status: 'all', flaky: false, healed: false, quarantined: false, q: '', limit: 200 };
+  function testDetail(t) {
+    var d = h('div', { class: 'detail' });
+    var fl = flakyById[t.id];
+    d.appendChild(h('div', { style: 'margin-top:10px' }, [
+      h('span', { class: 'muted', text: t.file + (t.line ? ':' + t.line : '') + '  [' + t.project + ']' }),
+      t.tags.length ? h('span', { class: 'muted', text: '  ' + t.tags.join(' ') }) : null,
+      fl ? h('span', {}, [' ', badge('radar ' + fl.risk + ' ' + pct(fl.failureRate), fl.risk)]) : null,
+      t.quarantined && t.quarantineReason ? h('span', { class: 'muted', text: '  quarantine: ' + t.quarantineReason }) : null
+    ]));
+    if (t.error) {
+      d.appendChild(h('h4', {}, ['Error ', t.triage ? badge(t.triage) : null]));
+      d.appendChild(h('pre', { text: t.error.message + (t.error.snippet ? '\n\n' + t.error.snippet : '') }));
+      if (t.error.stack) d.appendChild(h('details', {}, [h('summary', { class: 'muted', text: 'Stack trace' }), h('pre', { text: t.error.stack })]));
+    }
+    if (t.analysis) { d.appendChild(h('h4', { text: 'AI analysis' })); d.appendChild(h('pre', { text: t.analysis })); }
+    if (t.steps.length) {
+      d.appendChild(h('h4', { text: 'Steps' }));
+      var ul = h('ul', { class: 'tl' });
+      t.steps.forEach(function (st) {
+        ul.appendChild(h('li', {}, [h('span', { class: 'muted', text: '+' + fmtMs(st.offsetMs) }), h('span', { class: 'dot l-' + st.level }), h('span', { text: st.title })]));
+      });
+      d.appendChild(ul);
+    }
+    if (t.api.length) {
+      d.appendChild(h('h4', { text: 'API calls' }));
+      var tb = h('table', {}, h('thead', {}, h('tr', {}, ['Method', 'URL', 'Status', 'Time', ''].map(function (x) { return h('th', { text: x }); }))));
+      var body = h('tbody');
+      t.api.forEach(function (a) {
+        var btn = h('button', { class: 'btn', text: 'Copy cURL', onclick: function () { copy(curlFor(a), btn); } });
+        body.appendChild(h('tr', {}, [h('td', { text: a.method }), h('td', { style: 'word-break:break-all', text: a.url }),
+          h('td', {}, badge(String(a.status), a.status >= 400 ? 'failed' : 'passed')), h('td', { text: fmtMs(a.durationMs) }), h('td', {}, btn)]));
+        if (a.responseBody && a.status >= 400) body.appendChild(h('tr', {}, [h('td', { colspan: 5 }, h('pre', { text: a.responseBody }))]));
+      });
+      tb.appendChild(body); d.appendChild(tb);
+    }
+    if (t.heals.length) {
+      d.appendChild(h('h4', { text: 'Healed locators' }));
+      t.heals.forEach(function (x) {
+        d.appendChild(h('div', {}, [h('code', { text: x.key }), ' ', h('span', { class: 'muted', text: x.original + ' -> ' + x.healed + '  (' + x.strategy + ', ' + pct(x.confidence) + ')' })]));
+      });
+    }
+    if (t.ai.length) {
+      d.appendChild(h('h4', { text: 'AI usage' }));
+      t.ai.forEach(function (x) {
+        d.appendChild(h('div', { class: 'muted', text: x.feature + ': ' + x.goal + ' [cache ' + x.cache + (x.model ? ', ' + x.model : '') + ', ' + fmtMs(x.durationMs) + ']' }));
+      });
+    }
+    if (t.artifacts.length) {
+      d.appendChild(h('h4', { text: 'Artifacts' }));
+      var wrap = h('div', {});
+      t.artifacts.forEach(function (a) {
+        wrap.appendChild(h('a', { href: a.href, target: '_blank', rel: 'noopener noreferrer', text: a.name, style: 'margin-right:12px' }));
+      });
+      d.appendChild(wrap);
+    }
+    return d;
+  }
+  function renderTests() {
+    var el = clear(document.getElementById('view-tests'));
+    var list = h('div');
+    function draw() {
+      clear(list);
+      var q = F.q.toLowerCase();
+      var rows = latest.tests.filter(function (t) {
+        if (F.status !== 'all') {
+          var st = t.quarantined ? 'quarantined' : t.status;
+          if (F.status === 'failed' ? !(t.status === 'failed' || t.status === 'timedOut' || t.status === 'interrupted') || t.quarantined : st !== F.status) return false;
+        }
+        if (F.flaky && !t.flaky) return false;
+        if (F.healed && !t.heals.length) return false;
+        if (F.quarantined && !t.quarantined) return false;
+        if (q && (t.title + ' ' + t.file + ' ' + t.titlePath.join(' ') + ' ' + t.tags.join(' ')).toLowerCase().indexOf(q) < 0) return false;
+        return true;
+      });
+      if (!rows.length) { list.appendChild(empty('No tests match the filters.')); return; }
+      rows.slice(0, F.limit).forEach(function (t) {
+        var det = null;
+        var row = h('div', { class: 'row' });
+        var head = h('div', { class: 'head', tabindex: '0', role: 'button', 'aria-expanded': 'false' }, [
+          badge(t.quarantined ? 'quarantined' : t.status, t.quarantined ? 'quarantined' : t.status),
+          h('span', { class: 'title', text: t.titlePath.join(' > ') || t.title }),
+          t.flaky ? badge('flaky') : null, t.heals.length ? badge('healed') : null,
+          t.error && t.triage ? badge(t.triage) : null,
+          h('span', { class: 'file', text: t.file }),
+          h('span', { class: 'muted', text: fmtMs(t.durationMs) })
+        ]);
+        function toggle() {
+          if (det) { row.removeChild(det); det = null; head.setAttribute('aria-expanded', 'false'); }
+          else { det = testDetail(t); row.appendChild(det); head.setAttribute('aria-expanded', 'true'); }
+        }
+        head.addEventListener('click', toggle);
+        head.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+        row.appendChild(head); list.appendChild(row);
+      });
+      if (rows.length > F.limit) list.appendChild(h('button', { class: 'btn', text: 'Show more (' + (rows.length - F.limit) + ' hidden)', onclick: function () { F.limit += 200; draw(); } }));
+    }
+    function check(label, key) {
+      var cb = h('input', { type: 'checkbox' }); cb.checked = F[key];
+      cb.addEventListener('change', function () { F[key] = cb.checked; F.limit = 200; draw(); });
+      return h('label', {}, [cb, ' ' + label]);
+    }
+    var sel = h('select', {}, ['all', 'passed', 'failed', 'skipped', 'quarantined'].map(function (v) { return h('option', { value: v, text: v }); }));
+    sel.value = F.status;
+    sel.addEventListener('change', function () { F.status = sel.value; F.limit = 200; draw(); });
+    var search = h('input', { type: 'search', placeholder: 'Search title, file or tag', 'aria-label': 'Search tests' });
+    search.value = F.q;
+    search.addEventListener('input', function () { F.q = search.value; F.limit = 200; draw(); });
+    el.appendChild(h('div', { class: 'toolbar' }, [search, sel, check('flaky', 'flaky'), check('healed', 'healed'), check('quarantined', 'quarantined')]));
+    el.appendChild(list);
+    draw();
+  }
+
+  // ---------- Flakiness Radar ----------
+  function quarantineSpec(id) {
+    var i = id.indexOf('::'), j = id.indexOf('::', i + 2);
+    var file = id.slice(i + 2, j), title = id.slice(j + 2);
+    return file + (title ? ' › ' + title : '');
+  }
+  function renderRadar() {
+    var el = clear(document.getElementById('view-radar'));
+    var f = D.flakiness;
+    var counts = { HIGH: 0, WATCH: 0, STABLE: 0 };
+    f.forEach(function (x) { counts[x.risk]++; });
+    el.appendChild(h('div', { class: 'cards', style: 'margin-bottom:16px' }, [
+      stat(counts.HIGH, 'HIGH (>= 33%)', counts.HIGH ? 'fail' : ''), stat(counts.WATCH, 'WATCH (10-33%)', counts.WATCH ? 'warn' : ''), stat(counts.STABLE, 'STABLE (< 10%)', 'pass')
+    ]));
+    var high = f.filter(function (x) { return x.risk === 'HIGH'; });
+    if (high.length) {
+      var yaml = 'quarantine:\n' + high.map(function (x) { return '  - "' + quarantineSpec(x.id).replace(/"/g, '\\"') + '"'; }).join('\n') + '\n';
+      var btn = h('button', { class: 'btn', text: 'Copy YAML', onclick: function () { copy(yaml, btn); } });
+      el.appendChild(h('div', { class: 'card', style: 'margin-bottom:16px' }, [
+        h('h3', { text: 'Recommendation: quarantine ' + high.length + ' HIGH-risk test(s)' }),
+        h('p', { class: 'muted', text: 'Add to testfly-quarantine.yml to keep them out of the quality gate while you fix them.' }),
+        h('pre', { text: yaml }), h('div', { style: 'margin-top:8px' }, btn)
+      ]));
+    }
+    if (!f.length) { el.appendChild(empty('No history yet.')); return; }
+    var tb = h('table', {}, h('thead', {}, h('tr', {}, [['Risk', ''], ['Test', ''], ['Runs', 'num'], ['Failed', 'num'], ['Flaky', 'num'], ['Rate', ''], ['Avg time', 'num']].map(function (c) { return h('th', { class: c[1], text: c[0] }); }))));
+    var body = h('tbody');
+    f.forEach(function (x) {
+      body.appendChild(h('tr', {}, [
+        h('td', {}, badge(x.risk)), h('td', {}, [h('div', { text: x.title }), h('div', { class: 'muted', text: x.id.split('::').slice(0, 2).join(' / ') })]),
+        h('td', { class: 'num', text: String(x.runs) }), h('td', { class: 'num', text: String(x.failures) }), h('td', { class: 'num', text: String(x.flakyRuns) }),
+        h('td', { style: 'min-width:110px' }, [pct(x.failureRate), h('div', { class: 'bar-track' }, h('div', { class: 'bar', style: 'width:' + (x.failureRate * 100) + '%;background:' + (x.risk === 'HIGH' ? 'var(--fail)' : x.risk === 'WATCH' ? 'var(--warn)' : 'var(--pass)') }))]),
+        h('td', { class: 'num', text: fmtMs(x.avgDurationMs) })
+      ]));
+    });
+    tb.appendChild(body);
+    el.appendChild(h('div', { class: 'card' }, tb));
+  }
+
+  // ---------- History ----------
+  function renderHistory() {
+    var el = clear(document.getElementById('view-history'));
+    var H = D.history;
+    var W = 720, Ht = 160, pad = 24, n = H.length, bw = Math.max(4, Math.min(40, (W - pad * 2) / n - 4));
+    var svg = s('svg', { viewBox: '0 0 ' + W + ' ' + Ht, width: '100%', role: 'img', 'aria-label': 'Pass rate per run' });
+    [0, 50, 100].forEach(function (g) {
+      var y = Ht - pad - (Ht - pad * 2) * g / 100;
+      svg.appendChild(s('line', { x1: pad, x2: W - pad, y1: y, y2: y, stroke: 'var(--border)' }));
+      svg.appendChild(s('text', { x: 2, y: y + 3 }, g + '%'));
+    });
+    H.forEach(function (p, i) {
+      var x = pad + (n === 1 ? (W - pad * 2) / 2 - bw / 2 : i * ((W - pad * 2 - bw) / (n - 1)));
+      var bh = Math.max(2, (Ht - pad * 2) * p.passRate / 100);
+      var rect = s('rect', { x: x, y: Ht - pad - bh, width: bw, height: bh, rx: 2, fill: p.status === 'passed' ? 'var(--pass)' : 'var(--fail)' },
+        s('title', {}, fmtDate(p.startedAt) + ' - ' + p.passRate + '% (' + p.totals.failed + ' failed, ' + p.totals.flaky + ' flaky)'));
+      svg.appendChild(rect);
+    });
+    var maxD = Math.max.apply(null, H.map(function (p) { return p.durationMs; }).concat([1]));
+    var pts = H.map(function (p, i) {
+      return (pad + (n === 1 ? (W - pad * 2) / 2 : i * ((W - pad * 2) / (n - 1)))) + ',' + (Ht - pad - (Ht - pad * 2) * p.durationMs / maxD);
+    }).join(' ');
+    svg.appendChild(s('polyline', { points: pts, fill: 'none', stroke: 'var(--accent)', 'stroke-width': 2 }));
+    el.appendChild(h('div', { class: 'card' }, [h('h3', { text: 'Pass rate per run (bars) and duration (line, max ' + fmtMs(maxD) + ')' }), svg]));
+    var tb = h('table', {}, h('thead', {}, h('tr', {}, ['Started', 'Status', 'Pass rate', 'Passed', 'Failed', 'Flaky', 'Healed', 'Duration', 'Branch'].map(function (c) { return h('th', { text: c }); }))));
+    var body = h('tbody');
+    H.slice().reverse().forEach(function (p) {
+      body.appendChild(h('tr', {}, [h('td', { text: fmtDate(p.startedAt) + (p.shard ? ' (shard ' + p.shard + ')' : '') }), h('td', {}, badge(p.status, p.status === 'passed' ? 'passed' : 'failed')),
+        h('td', { text: p.passRate + '%' }), h('td', { text: String(p.totals.passed) }), h('td', { text: String(p.totals.failed) }), h('td', { text: String(p.totals.flaky) }),
+        h('td', { text: String(p.totals.healed) }), h('td', { text: fmtMs(p.durationMs) }), h('td', { text: p.branch || '' })]));
+    });
+    tb.appendChild(body);
+    el.appendChild(h('div', { class: 'card', style: 'margin-top:16px;overflow:auto' }, tb));
+  }
+
+  // ---------- Heals ----------
+  function renderHeals() {
+    var el = clear(document.getElementById('view-heals'));
+    if (!D.heals.length) { el.appendChild(empty('No locators were healed in the recorded runs.')); return; }
+    el.appendChild(h('p', { class: 'muted', text: 'Every heal is a brittle locator. Update the YAML locator definition so the test no longer depends on healing.' }));
+    var tb = h('table', {}, h('thead', {}, h('tr', {}, ['Locator key', 'Original', 'Healed to', 'Strategy', 'Confidence', 'Times', 'Last seen', 'Used by'].map(function (c) { return h('th', { text: c }); }))));
+    var body = h('tbody');
+    D.heals.forEach(function (x) {
+      body.appendChild(h('tr', {}, [h('td', {}, h('code', { text: x.key })), h('td', { style: 'word-break:break-all', text: x.original }), h('td', { style: 'word-break:break-all', text: x.healed }),
+        h('td', { text: x.strategy }), h('td', { text: pct(x.avgConfidence) }), h('td', { text: String(x.count) }), h('td', { text: fmtDate(x.lastSeen) }), h('td', { text: x.tests.join(', ') })]));
+    });
+    tb.appendChild(body);
+    el.appendChild(h('div', { class: 'card', style: 'overflow:auto' }, tb));
+  }
+
+  renderOverview(); renderTests(); renderRadar(); renderHistory(); renderHeals();
+  showTab((location.hash || '').slice(1));
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,353 @@
+{
+  "schemaVersion": 1,
+  "runId": "2026-10-13T22-50-34-660Z-qx35n0",
+  "startedAt": 1791931834660,
+  "durationMs": 8802,
+  "status": "failed",
+  "env": "local",
+  "playwrightVersion": "1.64.0",
+  "totals": {
+    "total": 9,
+    "passed": 8,
+    "failed": 1,
+    "flaky": 0,
+    "skipped": 0,
+    "quarantined": 0,
+    "healed": 0
+  },
+  "tests": [
+    {
+      "id": "::matchers.pw.ts::page toSatisfyAi passes",
+      "title": "page toSatisfyAi passes",
+      "titlePath": [
+        "page toSatisfyAi passes"
+      ],
+      "file": "matchers.pw.ts",
+      "line": 7,
+      "project": "",
+      "tags": [],
+      "status": "passed",
+      "flaky": false,
+      "quarantined": false,
+      "retries": 0,
+      "durationMs": 367,
+      "heals": [],
+      "steps": [],
+      "api": [],
+      "ai": [
+        {
+          "feature": "assert",
+          "goal": "satisfy: the cart shows 2 items",
+          "cache": "miss",
+          "provider": "fake",
+          "model": "fake-model",
+          "inputTokens": 3,
+          "outputTokens": 2,
+          "durationMs": 61
+        }
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "::matchers.pw.ts::page toViolateAi passes when the model says violated",
+      "title": "page toViolateAi passes when the model says violated",
+      "titlePath": [
+        "page toViolateAi passes when the model says violated"
+      ],
+      "file": "matchers.pw.ts",
+      "line": 12,
+      "project": "",
+      "tags": [],
+      "status": "passed",
+      "flaky": false,
+      "quarantined": false,
+      "retries": 0,
+      "durationMs": 227,
+      "heals": [],
+      "steps": [],
+      "api": [],
+      "ai": [
+        {
+          "feature": "assert",
+          "goal": "violate: page FAILME",
+          "cache": "miss",
+          "provider": "fake",
+          "model": "fake-model",
+          "inputTokens": 3,
+          "outputTokens": 2,
+          "durationMs": 46
+        }
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "::matchers.pw.ts::locator scope is sent to the model",
+      "title": "locator scope is sent to the model",
+      "titlePath": [
+        "locator scope is sent to the model"
+      ],
+      "file": "matchers.pw.ts",
+      "line": 17,
+      "project": "",
+      "tags": [],
+      "status": "passed",
+      "flaky": false,
+      "quarantined": false,
+      "retries": 0,
+      "durationMs": 203,
+      "heals": [],
+      "steps": [],
+      "api": [],
+      "ai": [
+        {
+          "feature": "assert",
+          "goal": "satisfy: shows items",
+          "cache": "miss",
+          "provider": "fake",
+          "model": "fake-model",
+          "inputTokens": 3,
+          "outputTokens": 2,
+          "durationMs": 42
+        }
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "::matchers.pw.ts::failing toSatisfyAi message contains the reason",
+      "title": "failing toSatisfyAi message contains the reason",
+      "titlePath": [
+        "failing toSatisfyAi message contains the reason"
+      ],
+      "file": "matchers.pw.ts",
+      "line": 22,
+      "project": "",
+      "tags": [],
+      "status": "passed",
+      "flaky": false,
+      "quarantined": false,
+      "retries": 0,
+      "durationMs": 255,
+      "heals": [],
+      "steps": [],
+      "api": [],
+      "ai": [
+        {
+          "feature": "assert",
+          "goal": "satisfy: FAILME please",
+          "cache": "miss",
+          "provider": "fake",
+          "model": "fake-model",
+          "inputTokens": 3,
+          "outputTokens": 2,
+          "durationMs": 49
+        }
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "::matchers.pw.ts::failing toViolateAi on locator message",
+      "title": "failing toViolateAi on locator message",
+      "titlePath": [
+        "failing toViolateAi on locator message"
+      ],
+      "file": "matchers.pw.ts",
+      "line": 32,
+      "project": "",
+      "tags": [],
+      "status": "passed",
+      "flaky": false,
+      "quarantined": false,
+      "retries": 0,
+      "durationMs": 225,
+      "heals": [],
+      "steps": [],
+      "api": [],
+      "ai": [
+        {
+          "feature": "assert",
+          "goal": "violate: fine",
+          "cache": "miss",
+          "provider": "fake",
+          "model": "fake-model",
+          "inputTokens": 3,
+          "outputTokens": 2,
+          "durationMs": 56
+        }
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "::matchers.pw.ts::.not variants",
+      "title": ".not variants",
+      "titlePath": [
+        ".not variants"
+      ],
+      "file": "matchers.pw.ts",
+      "line": 42,
+      "project": "",
+      "tags": [],
+      "status": "passed",
+      "flaky": false,
+      "quarantined": false,
+      "retries": 0,
+      "durationMs": 274,
+      "heals": [],
+      "steps": [],
+      "api": [],
+      "ai": [
+        {
+          "feature": "assert",
+          "goal": "satisfy: FAILME",
+          "cache": "miss",
+          "provider": "fake",
+          "model": "fake-model",
+          "inputTokens": 3,
+          "outputTokens": 2,
+          "durationMs": 57
+        },
+        {
+          "feature": "assert",
+          "goal": "violate: fine",
+          "cache": "miss",
+          "provider": "fake",
+          "model": "fake-model",
+          "inputTokens": 3,
+          "outputTokens": 2,
+          "durationMs": 21
+        },
+        {
+          "feature": "assert",
+          "goal": "satisfy: fine",
+          "cache": "miss",
+          "provider": "fake",
+          "model": "fake-model",
+          "inputTokens": 3,
+          "outputTokens": 2,
+          "durationMs": 15
+        }
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "::matchers.pw.ts::expect.soft records but does not stop",
+      "title": "expect.soft records but does not stop",
+      "titlePath": [
+        "expect.soft records but does not stop"
+      ],
+      "file": "matchers.pw.ts",
+      "line": 53,
+      "project": "",
+      "tags": [],
+      "status": "failed",
+      "flaky": false,
+      "quarantined": false,
+      "retries": 0,
+      "durationMs": 280,
+      "error": {
+        "message": "Error: Expected page to satisfy: \"FAILME soft\"\nAI verdict: fake-reason-bad",
+        "stack": "Error: Expected page to satisfy: \"FAILME soft\"\nAI verdict: fake-reason-bad\n    at /home/claude/testfly-playwright/packages/ai/test/e2e-project/matchers.pw.ts:55:27",
+        "snippet": "  53 | test('expect.soft records but does not stop', async ({ page }) => {\n  54 |   await page.setContent(HTML);\n> 55 |   await expect.soft(page).toSatisfyAi('FAILME soft');\n     |                           ^\n  56 |   await expect(page).toSatisfyAi('after soft');\n  57 | });\n  58 |"
+      },
+      "triage": "NEEDS_INVESTIGATION",
+      "heals": [],
+      "steps": [],
+      "api": [],
+      "ai": [
+        {
+          "feature": "assert",
+          "goal": "satisfy: FAILME soft",
+          "cache": "miss",
+          "provider": "fake",
+          "model": "fake-model",
+          "inputTokens": 3,
+          "outputTokens": 2,
+          "durationMs": 57
+        },
+        {
+          "feature": "assert",
+          "goal": "satisfy: after soft",
+          "cache": "miss",
+          "provider": "fake",
+          "model": "fake-model",
+          "inputTokens": 3,
+          "outputTokens": 2,
+          "durationMs": 24
+        }
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "::matchers.pw.ts::ai fixture: act + byIntent + assert",
+      "title": "ai fixture: act + byIntent + assert",
+      "titlePath": [
+        "ai fixture: act + byIntent + assert"
+      ],
+      "file": "matchers.pw.ts",
+      "line": 59,
+      "project": "",
+      "tags": [],
+      "status": "passed",
+      "flaky": false,
+      "quarantined": false,
+      "retries": 0,
+      "durationMs": 563,
+      "heals": [],
+      "steps": [],
+      "api": [],
+      "ai": [
+        {
+          "feature": "act",
+          "goal": "press the go button",
+          "cache": "miss",
+          "provider": "fake",
+          "model": "fake-model",
+          "inputTokens": 3,
+          "outputTokens": 2,
+          "durationMs": 148
+        },
+        {
+          "feature": "byIntent",
+          "goal": "go button",
+          "cache": "miss",
+          "provider": "fake",
+          "model": "fake-model",
+          "inputTokens": 3,
+          "outputTokens": 2,
+          "durationMs": 55
+        },
+        {
+          "feature": "assert",
+          "goal": "satisfy: the page is fine",
+          "cache": "miss",
+          "provider": "fake",
+          "model": "fake-model",
+          "inputTokens": 3,
+          "outputTokens": 2,
+          "durationMs": 22
+        }
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "::matchers.pw.ts::no runtime -> TF_AI_NOT_CONFIGURED",
+      "title": "no runtime -> TF_AI_NOT_CONFIGURED",
+      "titlePath": [
+        "no runtime -> TF_AI_NOT_CONFIGURED"
+      ],
+      "file": "matchers.pw.ts",
+      "line": 70,
+      "project": "",
+      "tags": [],
+      "status": "passed",
+      "flaky": false,
+      "quarantined": false,
+      "retries": 0,
+      "durationMs": 486,
+      "heals": [],
+      "steps": [],
+      "api": [],
+      "ai": [],
+      "artifacts": []
+    }
+  ]
+}

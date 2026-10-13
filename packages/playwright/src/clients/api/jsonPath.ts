@@ -72,10 +72,11 @@ export function queryJsonPath(data: unknown, path: string): JsonPathResult {
   let multi = false;
   for (const token of tokens) {
     const next: unknown[] = [];
+    // A wildcard always yields a list, even when nothing matched before it.
+    if (token.kind === 'wildcard') multi = true;
     for (const node of current) {
       if (node === null || typeof node !== 'object') continue;
       if (token.kind === 'wildcard') {
-        multi = true;
         next.push(...(Array.isArray(node) ? node : Object.values(node as Record<string, unknown>)));
       } else if (token.kind === 'index') {
         if (!Array.isArray(node)) continue;

@@ -170,7 +170,8 @@ export class MockClient {
   ): Promise<void> {
     await this.register(urlOrPattern, async (route: Route, request: Request) => {
       if (expectedMethod !== '*' && request.method().toUpperCase() !== expectedMethod.toUpperCase()) {
-        await route.continue();
+        // fallback (not continue) so mocks registered earlier for the same URL but another method still apply.
+        await route.fallback();
         return;
       }
 

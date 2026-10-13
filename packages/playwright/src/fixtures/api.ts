@@ -14,6 +14,10 @@ export interface ApiFixtures {
 export const apiTest = coreTest.extend<ApiFixtures>({
   api: async ({ request, testfly }, use, testInfo) => {
     const client = new ApiClient(request, { ...testfly.api, baseUrl: testfly.api.baseUrl ?? testfly.baseUrl }, testInfo);
-    await use(client);
+    try {
+      await use(client);
+    } finally {
+      await client.flushEvents();
+    }
   },
 });

@@ -1,0 +1,12 @@
+heading:
+  role: heading
+  name: Welcome
+  level: 1
+cta:
+  testid: cta
+  fallbacks:
+    - css: "#legacy-cta"
+submit:
+  css: "#submit-btn"
+missing:
+  css: "#totally-absent"

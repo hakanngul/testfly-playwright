@@ -42,7 +42,7 @@ export const TRIAGE_RULES: readonly TriageRule[] = [
   // 4. Genuine assertion mismatch on application data.
   { id: 'assertion-mismatch', pattern: /expect\([^)]*\)\.(?:not\.)?to\w+[\s\S]*?(?:Expected|Received)|Expected(?: string| substring| pattern| value| array)?:[\s\S]*Received/i, category: 'APPLICATION_BUG' },
   // 5. Generic timeouts are most often slow environments.
-  { id: 'timeout', pattern: /Timeout \d+ms exceeded|timed out|TimeoutError/i, category: 'SYSTEM_FLAKY' },
+  { id: 'timeout', pattern: /Timeout (?:of )?\d+ms exceeded|timed out|TimeoutError/i, category: 'SYSTEM_FLAKY' },
 ];
 
 /** Removes ANSI escape sequences (Playwright colors assertion output). */

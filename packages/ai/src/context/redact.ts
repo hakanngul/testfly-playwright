@@ -11,7 +11,7 @@ const BUILTIN: [RegExp, string][] = [
 ];
 
 const SECRET_ENV_NAME = /(SECRET|TOKEN|PASSWORD|API_KEY|PRIVATE)/i;
-const CARD_CANDIDATE = /\b(?:\d[ -]?){13,19}\b/g;
+const CARD_CANDIDATE = /\b\d(?:[ -]?\d){12,18}\b/g;
 
 function luhn(digits: string): boolean {
   let sum = 0;

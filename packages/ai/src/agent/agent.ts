@@ -122,7 +122,7 @@ export class TestFlyAgent implements AiAgent {
       // 3) LLM compile (live only)
       if (!rt.live) throw rt.cacheMiss(`A plan for "${goal}" on ${pattern}`);
       cache = 'miss';
-      const ctx = await getPageContext(page, rt.options.maxContextChars);
+      const ctx = await getPageContext(page, rt.options.maxContextChars, secretValues(params));
       const compiled = await rt.completeJson({
         system: actSystemPrompt(),
         user: actUserPrompt({ goal, pageContext: formatPageContext(ctx), alreadyDone: done }),
@@ -207,6 +207,11 @@ export class TestFlyAgent implements AiAgent {
       await rt.attach('byIntent', intent, cache, startedAt, usage);
     }
   }
+}
+
+/** Param values may be secrets: they must not leak into the model prompt via the page context. */
+function secretValues(params: Record<string, string>): string[] {
+  return Object.values(params).filter((v) => v.length >= 4);
 }
 
 function entry(plan: ActionStep[], source: ActionCacheEntry['source'], model?: string): ActionCacheEntry {

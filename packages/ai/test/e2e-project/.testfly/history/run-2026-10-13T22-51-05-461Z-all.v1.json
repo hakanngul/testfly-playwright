@@ -1,0 +1,270 @@
+{
+  "schemaVersion": 1,
+  "runId": "2026-10-13T22-51-05-461Z-zi1ow5",
+  "startedAt": 1791931865461,
+  "durationMs": 18957,
+  "status": "failed",
+  "env": "local",
+  "playwrightVersion": "1.64.0",
+  "totals": {
+    "total": 9,
+    "passed": 1,
+    "failed": 8,
+    "flaky": 0,
+    "skipped": 0,
+    "quarantined": 0,
+    "healed": 0
+  },
+  "tests": [
+    {
+      "id": "::matchers.pw.ts::page toSatisfyAi passes",
+      "title": "page toSatisfyAi passes",
+      "titlePath": [
+        "page toSatisfyAi passes"
+      ],
+      "file": "matchers.pw.ts",
+      "line": 7,
+      "project": "",
+      "tags": [],
+      "status": "failed",
+      "flaky": false,
+      "quarantined": false,
+      "retries": 0,
+      "durationMs": 494,
+      "error": {
+        "message": "TestFlyError: [TF_FEATURE_DISABLED] AI assertions are not available in ai.mode=\"replay\".\n  → AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.\n  ↪ https://testfly.dev/docs/playwright/errors#tf-feature-disabled",
+        "stack": "TestFlyError: [TF_FEATURE_DISABLED] AI assertions are not available in ai.mode=\"replay\".\n  → AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.\n  ↪ https://testfly.dev/docs/playwright/errors#tf-feature-disabled\n    at judge (/home/claude/testfly-playwright/packages/ai/src/assertions/matchers.ts:38:11)\n    at Object.<anonymous> (/home/claude/testfly-playwright/packages/ai/src/assertions/matchers.ts:59:36)\n    at /home/claude/testfly-playwright/packages/ai/test/e2e-project/matchers.pw.ts:9:22",
+        "snippet": "   at ../../src/assertions/matchers.ts:38\n\n  36 |   if (!runtime.live) {\n  37 |     // Assertions are never cached: replay must not silently pass or skip.\n> 38 |     throw new TestFlyError('TF_FEATURE_DISABLED', 'AI assertions are not available in ai.mode=\"replay\".', {\n     |           ^\n  39 |       hint: 'AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.',\n  40 |     });\n  41 |   }"
+      },
+      "triage": "NEEDS_INVESTIGATION",
+      "heals": [],
+      "steps": [],
+      "api": [],
+      "ai": [],
+      "artifacts": []
+    },
+    {
+      "id": "::matchers.pw.ts::page toViolateAi passes when the model says violated",
+      "title": "page toViolateAi passes when the model says violated",
+      "titlePath": [
+        "page toViolateAi passes when the model says violated"
+      ],
+      "file": "matchers.pw.ts",
+      "line": 12,
+      "project": "",
+      "tags": [],
+      "status": "failed",
+      "flaky": false,
+      "quarantined": false,
+      "retries": 0,
+      "durationMs": 353,
+      "error": {
+        "message": "TestFlyError: [TF_FEATURE_DISABLED] AI assertions are not available in ai.mode=\"replay\".\n  → AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.\n  ↪ https://testfly.dev/docs/playwright/errors#tf-feature-disabled",
+        "stack": "TestFlyError: [TF_FEATURE_DISABLED] AI assertions are not available in ai.mode=\"replay\".\n  → AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.\n  ↪ https://testfly.dev/docs/playwright/errors#tf-feature-disabled\n    at judge (/home/claude/testfly-playwright/packages/ai/src/assertions/matchers.ts:38:11)\n    at Object.<anonymous> (/home/claude/testfly-playwright/packages/ai/src/assertions/matchers.ts:59:36)\n    at /home/claude/testfly-playwright/packages/ai/test/e2e-project/matchers.pw.ts:14:22",
+        "snippet": "   at ../../src/assertions/matchers.ts:38\n\n  36 |   if (!runtime.live) {\n  37 |     // Assertions are never cached: replay must not silently pass or skip.\n> 38 |     throw new TestFlyError('TF_FEATURE_DISABLED', 'AI assertions are not available in ai.mode=\"replay\".', {\n     |           ^\n  39 |       hint: 'AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.',\n  40 |     });\n  41 |   }"
+      },
+      "triage": "NEEDS_INVESTIGATION",
+      "heals": [],
+      "steps": [],
+      "api": [],
+      "ai": [],
+      "artifacts": []
+    },
+    {
+      "id": "::matchers.pw.ts::locator scope is sent to the model",
+      "title": "locator scope is sent to the model",
+      "titlePath": [
+        "locator scope is sent to the model"
+      ],
+      "file": "matchers.pw.ts",
+      "line": 17,
+      "project": "",
+      "tags": [],
+      "status": "failed",
+      "flaky": false,
+      "quarantined": false,
+      "retries": 0,
+      "durationMs": 473,
+      "error": {
+        "message": "TestFlyError: [TF_FEATURE_DISABLED] AI assertions are not available in ai.mode=\"replay\".\n  → AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.\n  ↪ https://testfly.dev/docs/playwright/errors#tf-feature-disabled",
+        "stack": "TestFlyError: [TF_FEATURE_DISABLED] AI assertions are not available in ai.mode=\"replay\".\n  → AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.\n  ↪ https://testfly.dev/docs/playwright/errors#tf-feature-disabled\n    at judge (/home/claude/testfly-playwright/packages/ai/src/assertions/matchers.ts:38:11)\n    at Object.<anonymous> (/home/claude/testfly-playwright/packages/ai/src/assertions/matchers.ts:59:36)\n    at /home/claude/testfly-playwright/packages/ai/test/e2e-project/matchers.pw.ts:19:36",
+        "snippet": "   at ../../src/assertions/matchers.ts:38\n\n  36 |   if (!runtime.live) {\n  37 |     // Assertions are never cached: replay must not silently pass or skip.\n> 38 |     throw new TestFlyError('TF_FEATURE_DISABLED', 'AI assertions are not available in ai.mode=\"replay\".', {\n     |           ^\n  39 |       hint: 'AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.',\n  40 |     });\n  41 |   }"
+      },
+      "triage": "NEEDS_INVESTIGATION",
+      "heals": [],
+      "steps": [],
+      "api": [],
+      "ai": [],
+      "artifacts": []
+    },
+    {
+      "id": "::matchers.pw.ts::failing toSatisfyAi message contains the reason",
+      "title": "failing toSatisfyAi message contains the reason",
+      "titlePath": [
+        "failing toSatisfyAi message contains the reason"
+      ],
+      "file": "matchers.pw.ts",
+      "line": 22,
+      "project": "",
+      "tags": [],
+      "status": "failed",
+      "flaky": false,
+      "quarantined": false,
+      "retries": 0,
+      "durationMs": 546,
+      "error": {
+        "message": "Error: bad message: [TF_FEATURE_DISABLED] AI assertions are not available in ai.mode=\"replay\".\n  → AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.\n  ↪ https://testfly.dev/docs/playwright/errors#tf-feature-disabled",
+        "stack": "Error: bad message: [TF_FEATURE_DISABLED] AI assertions are not available in ai.mode=\"replay\".\n  → AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.\n  ↪ https://testfly.dev/docs/playwright/errors#tf-feature-disabled\n    at /home/claude/testfly-playwright/packages/ai/test/e2e-project/matchers.pw.ts:29:129",
+        "snippet": "  27 |   );\n  28 |   if (!err) throw new Error('expected rejection');\n> 29 |   if (!/Expected page to satisfy: \"FAILME please\"/.test(err.message) || !/AI verdict: fake-reason-bad/.test(err.message)) throw new Error(`bad message: ${err.message}`);\n     |                                                                                                                                 ^\n  30 | });\n  31 |\n  32 | test('failing toViolateAi on locator message', async ({ page }) => {"
+      },
+      "triage": "NEEDS_INVESTIGATION",
+      "heals": [],
+      "steps": [],
+      "api": [],
+      "ai": [],
+      "artifacts": []
+    },
+    {
+      "id": "::matchers.pw.ts::failing toViolateAi on locator message",
+      "title": "failing toViolateAi on locator message",
+      "titlePath": [
+        "failing toViolateAi on locator message"
+      ],
+      "file": "matchers.pw.ts",
+      "line": 32,
+      "project": "",
+      "tags": [],
+      "status": "failed",
+      "flaky": false,
+      "quarantined": false,
+      "retries": 0,
+      "durationMs": 341,
+      "error": {
+        "message": "Error: bad message: [TF_FEATURE_DISABLED] AI assertions are not available in ai.mode=\"replay\".\n  → AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.\n  ↪ https://testfly.dev/docs/playwright/errors#tf-feature-disabled",
+        "stack": "Error: bad message: [TF_FEATURE_DISABLED] AI assertions are not available in ai.mode=\"replay\".\n  → AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.\n  ↪ https://testfly.dev/docs/playwright/errors#tf-feature-disabled\n    at /home/claude/testfly-playwright/packages/ai/test/e2e-project/matchers.pw.ts:39:112",
+        "snippet": "  37 |   );\n  38 |   if (!err) throw new Error('expected rejection');\n> 39 |   if (!/Expected locator to violate: \"fine\"/.test(err.message) || !/fake-reason-good/.test(err.message)) throw new Error(`bad message: ${err.message}`);\n     |                                                                                                                ^\n  40 | });\n  41 |\n  42 | test('.not variants', async ({ page }) => {"
+      },
+      "triage": "NEEDS_INVESTIGATION",
+      "heals": [],
+      "steps": [],
+      "api": [],
+      "ai": [],
+      "artifacts": []
+    },
+    {
+      "id": "::matchers.pw.ts::.not variants",
+      "title": ".not variants",
+      "titlePath": [
+        ".not variants"
+      ],
+      "file": "matchers.pw.ts",
+      "line": 42,
+      "project": "",
+      "tags": [],
+      "status": "failed",
+      "flaky": false,
+      "quarantined": false,
+      "retries": 0,
+      "durationMs": 270,
+      "error": {
+        "message": "TestFlyError: [TF_FEATURE_DISABLED] AI assertions are not available in ai.mode=\"replay\".\n  → AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.\n  ↪ https://testfly.dev/docs/playwright/errors#tf-feature-disabled",
+        "stack": "TestFlyError: [TF_FEATURE_DISABLED] AI assertions are not available in ai.mode=\"replay\".\n  → AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.\n  ↪ https://testfly.dev/docs/playwright/errors#tf-feature-disabled\n    at judge (/home/claude/testfly-playwright/packages/ai/src/assertions/matchers.ts:38:11)\n    at Object.<anonymous> (/home/claude/testfly-playwright/packages/ai/src/assertions/matchers.ts:59:36)\n    at /home/claude/testfly-playwright/packages/ai/test/e2e-project/matchers.pw.ts:44:26",
+        "snippet": "   at ../../src/assertions/matchers.ts:38\n\n  36 |   if (!runtime.live) {\n  37 |     // Assertions are never cached: replay must not silently pass or skip.\n> 38 |     throw new TestFlyError('TF_FEATURE_DISABLED', 'AI assertions are not available in ai.mode=\"replay\".', {\n     |           ^\n  39 |       hint: 'AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.',\n  40 |     });\n  41 |   }"
+      },
+      "triage": "NEEDS_INVESTIGATION",
+      "heals": [],
+      "steps": [],
+      "api": [],
+      "ai": [],
+      "artifacts": []
+    },
+    {
+      "id": "::matchers.pw.ts::expect.soft records but does not stop",
+      "title": "expect.soft records but does not stop",
+      "titlePath": [
+        "expect.soft records but does not stop"
+      ],
+      "file": "matchers.pw.ts",
+      "line": 53,
+      "project": "",
+      "tags": [],
+      "status": "failed",
+      "flaky": false,
+      "quarantined": false,
+      "retries": 0,
+      "durationMs": 336,
+      "error": {
+        "message": "TestFlyError: [TF_FEATURE_DISABLED] AI assertions are not available in ai.mode=\"replay\".\n  → AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.\n  ↪ https://testfly.dev/docs/playwright/errors#tf-feature-disabled",
+        "stack": "TestFlyError: [TF_FEATURE_DISABLED] AI assertions are not available in ai.mode=\"replay\".\n  → AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.\n  ↪ https://testfly.dev/docs/playwright/errors#tf-feature-disabled\n    at judge (/home/claude/testfly-playwright/packages/ai/src/assertions/matchers.ts:38:11)\n    at Object.<anonymous> (/home/claude/testfly-playwright/packages/ai/src/assertions/matchers.ts:59:36)\n    at /home/claude/testfly-playwright/packages/ai/test/e2e-project/matchers.pw.ts:55:27",
+        "snippet": "   at ../../src/assertions/matchers.ts:38\n\n  36 |   if (!runtime.live) {\n  37 |     // Assertions are never cached: replay must not silently pass or skip.\n> 38 |     throw new TestFlyError('TF_FEATURE_DISABLED', 'AI assertions are not available in ai.mode=\"replay\".', {\n     |           ^\n  39 |       hint: 'AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.',\n  40 |     });\n  41 |   }"
+      },
+      "triage": "NEEDS_INVESTIGATION",
+      "heals": [],
+      "steps": [],
+      "api": [],
+      "ai": [],
+      "artifacts": []
+    },
+    {
+      "id": "::matchers.pw.ts::ai fixture: act + byIntent + assert",
+      "title": "ai fixture: act + byIntent + assert",
+      "titlePath": [
+        "ai fixture: act + byIntent + assert"
+      ],
+      "file": "matchers.pw.ts",
+      "line": 59,
+      "project": "",
+      "tags": [],
+      "status": "failed",
+      "flaky": false,
+      "quarantined": false,
+      "retries": 0,
+      "durationMs": 361,
+      "error": {
+        "message": "TestFlyError: [TF_FEATURE_DISABLED] AI assertions are not available in ai.mode=\"replay\".\n  → AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.\n  ↪ https://testfly.dev/docs/playwright/errors#tf-feature-disabled",
+        "stack": "TestFlyError: [TF_FEATURE_DISABLED] AI assertions are not available in ai.mode=\"replay\".\n  → AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.\n  ↪ https://testfly.dev/docs/playwright/errors#tf-feature-disabled\n    at judge (/home/claude/testfly-playwright/packages/ai/src/assertions/matchers.ts:38:11)\n    at Object.<anonymous> (/home/claude/testfly-playwright/packages/ai/src/assertions/matchers.ts:59:36)\n    at Object.assertFn (/home/claude/testfly-playwright/packages/ai/src/index.ts:37:45)\n    at run (/home/claude/testfly-playwright/packages/ai/src/agent/agent.ts:68:33)",
+        "snippet": "   at ../../src/assertions/matchers.ts:38\n\n  36 |   if (!runtime.live) {\n  37 |     // Assertions are never cached: replay must not silently pass or skip.\n> 38 |     throw new TestFlyError('TF_FEATURE_DISABLED', 'AI assertions are not available in ai.mode=\"replay\".', {\n     |           ^\n  39 |       hint: 'AI assertions need ai.mode=live (they are evaluated on every run). Use deterministic matchers on CI.',\n  40 |     });\n  41 |   }"
+      },
+      "triage": "NEEDS_INVESTIGATION",
+      "heals": [],
+      "steps": [],
+      "api": [],
+      "ai": [
+        {
+          "feature": "act",
+          "goal": "press the go button",
+          "cache": "hit",
+          "durationMs": 92
+        },
+        {
+          "feature": "byIntent",
+          "goal": "go button",
+          "cache": "hit",
+          "durationMs": 7
+        }
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "::matchers.pw.ts::no runtime -> TF_AI_NOT_CONFIGURED",
+      "title": "no runtime -> TF_AI_NOT_CONFIGURED",
+      "titlePath": [
+        "no runtime -> TF_AI_NOT_CONFIGURED"
+      ],
+      "file": "matchers.pw.ts",
+      "line": 70,
+      "project": "",
+      "tags": [],
+      "status": "passed",
+      "flaky": false,
+      "quarantined": false,
+      "retries": 0,
+      "durationMs": 258,
+      "heals": [],
+      "steps": [],
+      "api": [],
+      "ai": [],
+      "artifacts": []
+    }
+  ]
+}

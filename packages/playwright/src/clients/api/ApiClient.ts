@@ -312,7 +312,8 @@ export class ApiClient {
       status,
       durationMs,
       attempt,
-      curl: buildCurl(prepared.method, url, prepared.headers, opts.multipart ? undefined : bodyStr),
+      // logBodies=false must keep request bodies out of the curl command too (they may hold secrets).
+      curl: buildCurl(prepared.method, url, prepared.headers, opts.multipart || !options.logBodies ? undefined : bodyStr),
     };
     if (options.logBodies) {
       if (bodyStr) event.requestBody = truncate(bodyStr, options.truncateAt);

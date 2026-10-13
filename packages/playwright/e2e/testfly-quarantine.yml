@@ -1,0 +1,4 @@
+quarantine:
+  - test: "quarantine.spec.ts › quarantined by title"
+    reason: known flaky upstream
+  - "@qtag"

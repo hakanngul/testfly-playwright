@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "runId": "2026-10-13T22-50-45-359Z-534kd0",
+  "startedAt": 1791931845359,
+  "durationMs": 3515,
+  "status": "failed",
+  "env": "local",
+  "playwrightVersion": "1.64.0",
+  "totals": {
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "flaky": 0,
+    "skipped": 0,
+    "quarantined": 0,
+    "healed": 0
+  },
+  "tests": [
+    {
+      "id": "::failing.pw.ts::deliberately failing test",
+      "title": "deliberately failing test",
+      "titlePath": [
+        "deliberately failing test"
+      ],
+      "file": "failing.pw.ts",
+      "line": 4,
+      "project": "",
+      "tags": [],
+      "status": "failed",
+      "flaky": false,
+      "quarantined": false,
+      "retries": 0,
+      "durationMs": 949,
+      "error": {
+        "message": "Error: expect(locator).toBeVisible() failed\n\nLocator: getByRole('button', { name: 'Nope' })\nExpected: visible\nTimeout: 500ms\nError: element(s) not found\n\nCall log:\n  - Expect \"toBeVisible\" getByRole('button', { name: 'Nope' }) with timeout 500ms\n  - waiting for getByRole('button', { name: 'Nope' })\n",
+        "stack": "Error: expect(locator).toBeVisible() failed\n\nLocator: getByRole('button', { name: 'Nope' })\nExpected: visible\nTimeout: 500ms\nError: element(s) not found\n\nCall log:\n  - Expect \"toBeVisible\" getByRole('button', { name: 'Nope' }) with timeout 500ms\n  - waiting for getByRole('button', { name: 'Nope' })\n\n    at /home/claude/testfly-playwright/packages/ai/test/e2e-project/failing.pw.ts:6:60",
+        "snippet": "  4 | test('deliberately failing test', async ({ page }) => {\n  5 |   await page.setContent('<button>Go</button>');\n> 6 |   await expect(page.getByRole('button', { name: 'Nope' })).toBeVisible({ timeout: 500 });\n    |                                                            ^\n  7 | });\n  8 |"
+      },
+      "triage": "TEST_BUG",
+      "heals": [],
+      "steps": [],
+      "api": [],
+      "ai": [],
+      "artifacts": []
+    }
+  ]
+}
