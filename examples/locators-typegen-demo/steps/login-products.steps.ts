@@ -1,4 +1,4 @@
-import { Given, When, Then, expect } from '@testfly/playwright';
+import { Given, When, Then, expect } from '@testfly/playwright/bdd';
 
 Given('the user navigates to the login page', async ({ page }) => {
   await page.goto('/');

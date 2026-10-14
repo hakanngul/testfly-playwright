@@ -1,15 +1,21 @@
-import { defineConfig, devices } from '@playwright/test';
-import { defineBddConfig, cucumberReporter } from '@testfly/playwright';
-
-const testDir = defineBddConfig({
-  features: 'features/*.feature',
-  steps: ['steps/*.steps.ts', 'steps/**/*.steps.ts'],
-  importTestFrom: require.resolve('@testfly/playwright'),
-  disableWarnings: { importTestFrom: true },
-});
+import { devices } from '@playwright/test';
+import { defineConfig } from '@testfly/playwright/config';
+import { cucumberReporter } from '@testfly/playwright/bdd';
 
 export default defineConfig({
-  testDir,
+  testfly: {
+    baseUrl: 'https://demo.playwright.dev/todomvc',
+    env: 'local',
+    api: { baseUrl: 'https://jsonplaceholder.typicode.com' },
+    // Explicit in-memory table store (`db.mock`); switch to postgres/mysql for a real database.
+    db: { client: 'mock' },
+    // Redis is optional: set REDIS_URL (and install ioredis) to enable the redis spec.
+    ...(process.env.REDIS_URL ? { redis: { url: process.env.REDIS_URL } } : {}),
+    bdd: {
+      features: 'features/*.feature',
+      steps: ['steps/*.steps.ts', 'steps/**/*.steps.ts'],
+    },
+  },
   outputDir: 'reports/test-results',
   timeout: 30000,
   fullyParallel: true,
@@ -24,14 +30,13 @@ export default defineConfig({
     cucumberReporter('json', { outputFile: 'reports/cucumber/report.json' }),
   ],
   use: {
-    baseURL: 'https://demo.playwright.dev/todomvc',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
   projects: [
+    // Inherits the generated BDD test directory.
     {
       name: 'bdd-tests',
-      testDir,
       use: { ...devices['Desktop Chrome'], channel: 'chrome' },
     },
     {

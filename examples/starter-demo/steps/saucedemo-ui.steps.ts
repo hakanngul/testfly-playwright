@@ -1,4 +1,4 @@
-import { Given, When, Then, expect } from '@testfly/playwright';
+import { Given, When, Then, expect } from '@testfly/playwright/bdd';
 import { LoginPage } from '../pages/LoginPage';
 import { InventoryPage } from '../pages/InventoryPage';
 import { CartPage } from '../pages/CartPage';

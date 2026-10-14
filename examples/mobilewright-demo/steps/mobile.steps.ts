@@ -1,34 +1,43 @@
-import { Given, When, Then, expect } from '@testfly/playwright';
+import { Given, When, Then, expect } from '@testfly/playwright/bdd';
+import { launchApp } from '../support/app';
 
-Given('the mobile application is launched', async ({ mobile, step }) => {
-  await step.info('Launching mobile application instance');
-  await mobile.launchApp();
+Given('the mobile application is launched', async ({ page, locate, step }) => {
+  await step.info('Launching mobile application instance (mobile device emulation)');
+  await launchApp(page);
+  await expect(locate('mobile_app.welcome_title')).toBeVisible();
 });
 
-When('the user swipes {string} on the onboarding carousel', async ({ screen, step }, direction: 'left' | 'right' | 'up' | 'down') => {
+When('the user swipes {string} on the onboarding carousel', async ({ locate, step }, direction: 'left' | 'right' | 'up' | 'down') => {
   await step.info(`Swiping ${direction} on carousel`);
-  const carousel = screen.getByLabel('carousel_onboarding');
-  await carousel.swipe(direction, { distance: 300 });
+  const carousel = locate('mobile_app.onboarding_carousel');
+  const offsets = { left: [300, 0], right: [-300, 0], up: [0, 300], down: [0, -300] } as const;
+  const [dx, dy] = offsets[direction];
+  // Touch swipes are not synthesized by Playwright; scroll the carousel like a swipe would.
+  await carousel.evaluate((el, [x, y]) => el.scrollBy({ left: x, top: y }), [dx, dy] as const);
+  if (direction === 'left') await expect.poll(() => carousel.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
 });
 
-When('taps the {string} button', async ({ screen, step }, buttonName: string) => {
+When('taps the {string} button', async ({ page, step }, buttonName: string) => {
   await step.info(`Tapping button: ${buttonName}`);
-  const btn = screen.getByText(buttonName);
-  await btn.tap();
+  await page.getByRole('button', { name: buttonName }).tap();
 });
 
-When('the user long presses the {string} button for {int} ms', async ({ screen, step }, buttonName: string, durationMs: number) => {
+When('the user long presses the {string} button for {int} ms', async ({ page, step }, buttonName: string, durationMs: number) => {
   await step.info(`Long pressing ${buttonName} for ${durationMs}ms`);
-  const btn = screen.getByText(buttonName);
-  await btn.longPress(durationMs);
+  const box = await page.getByRole('button', { name: buttonName }).boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(durationMs);
+  await page.mouse.up();
 });
 
-Then('the login bottom sheet should be displayed', async ({ screen, step }) => {
+Then('the login bottom sheet should be displayed', async ({ locate, step }) => {
   await step.info('Verifying login bottom sheet is visible');
-  const sheet = screen.getByLabel('sheet_login');
-  expect(await sheet.toBeVisible()).toBe(true);
+  await expect(locate('mobile_app.login_sheet')).toBeVisible();
 });
 
-Then('the action should complete successfully', async ({ step }) => {
-  await step.info('Gesture action verified successfully');
+Then('the action should complete successfully', async ({ locate, step }) => {
+  await step.info('Verifying the long press was recognized');
+  await expect(locate('mobile_app.gesture_status')).toHaveText('long-press');
 });
