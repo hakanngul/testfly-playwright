@@ -49,6 +49,8 @@ Per test over the last N runs, a run counts as unstable when the test failed or 
 
 `triageFailure()` classifies failures with an ordered rule table (`TRIAGE_RULES` in `src/triage.ts`, first match wins): `SYSTEM_FLAKY` (timeouts, `net::ERR`, `ECONNRESET`, closed browser, 5xx, passed on retry), `TEST_BUG` (locator not found, strict mode violation, TypeError/ReferenceError, `TF_LOCATOR`), `APPLICATION_BUG` (assertion mismatch), otherwise `NEEDS_INVESTIGATION` (also heal-related failures).
 
+Triage is purely rule-based: no LLM, zero tokens. LLM root-cause analysis is a separate opt-in reporter in `@testfly/ai` (`@testfly/ai/reporter`, writes `<outputDir>/report/ai-analysis.json`). The dashboard does not embed that file yet.
+
 ## Quarantine file
 
 ```yaml
