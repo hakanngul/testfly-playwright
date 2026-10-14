@@ -1,6 +1,15 @@
+import { MobileDriver, requireDriverMethod } from './driver';
 import { MobileScreen } from './MobileScreen';
-import { getTestFlyConfig } from '../../core/config';
 
+/**
+ * Static options for {@link MobileClient}. The `@testfly/playwright` config has no
+ * mobile section (this package is experimental), so options are passed explicitly.
+ */
+export interface MobileClientOptions {
+  platform?: 'ios' | 'android';
+  bundleId?: string;
+  deviceName?: string;
+}
 
 export interface MobileLaunchOptions {
   bundleId?: string;
@@ -13,16 +22,15 @@ export class MobileClient {
   public platform: 'ios' | 'android';
   public bundleId: string;
   public deviceName: string;
-  private driver?: any;
+  private driver?: MobileDriver;
 
-  constructor(driver?: any) {
+  constructor(driver?: MobileDriver, options: MobileClientOptions = {}) {
     this.driver = driver;
     this.screen = new MobileScreen(driver);
 
-    const config = getTestFlyConfig();
-    this.platform = config.mobile?.platform === 'ios' ? 'ios' : 'android';
-    this.bundleId = config.mobile?.bundleId || '';
-    this.deviceName = config.mobile?.deviceName || 'AutoDetected';
+    this.platform = options.platform === 'ios' ? 'ios' : 'android';
+    this.bundleId = options.bundleId || '';
+    this.deviceName = options.deviceName || 'AutoDetected';
   }
 
   /**
@@ -30,9 +38,7 @@ export class MobileClient {
    */
   async launchApp(bundleId?: string, options: MobileLaunchOptions = {}): Promise<void> {
     const targetBundle = bundleId || this.bundleId;
-    if (this.driver && typeof this.driver.launchApp === 'function') {
-      await this.driver.launchApp(targetBundle, options);
-    }
+    await requireDriverMethod(this.driver, 'launchApp', 'client.launchApp')(targetBundle, options);
   }
 
   /**
@@ -40,18 +46,14 @@ export class MobileClient {
    */
   async terminateApp(bundleId?: string): Promise<void> {
     const targetBundle = bundleId || this.bundleId;
-    if (this.driver && typeof this.driver.terminateApp === 'function') {
-      await this.driver.terminateApp(targetBundle);
-    }
+    await requireDriverMethod(this.driver, 'terminateApp', 'client.terminateApp')(targetBundle);
   }
 
   /**
    * Install native application (.apk or .ipa / .app)
    */
   async installApp(appPath: string): Promise<void> {
-    if (this.driver && typeof this.driver.installApp === 'function') {
-      await this.driver.installApp(appPath);
-    }
+    await requireDriverMethod(this.driver, 'installApp', 'client.installApp')(appPath);
   }
 
   /**
@@ -59,26 +61,20 @@ export class MobileClient {
    */
   async uninstallApp(bundleId?: string): Promise<void> {
     const targetBundle = bundleId || this.bundleId;
-    if (this.driver && typeof this.driver.uninstallApp === 'function') {
-      await this.driver.uninstallApp(targetBundle);
-    }
+    await requireDriverMethod(this.driver, 'uninstallApp', 'client.uninstallApp')(targetBundle);
   }
 
   /**
    * Open a deep link / universal link inside the mobile app
    */
   async deepLink(url: string): Promise<void> {
-    if (this.driver && typeof this.driver.deepLink === 'function') {
-      await this.driver.deepLink(url);
-    }
+    await requireDriverMethod(this.driver, 'deepLink', 'client.deepLink')(url);
   }
 
   /**
    * Change device screen orientation
    */
   async setOrientation(orientation: 'PORTRAIT' | 'LANDSCAPE'): Promise<void> {
-    if (this.driver && typeof this.driver.setOrientation === 'function') {
-      await this.driver.setOrientation(orientation);
-    }
+    await requireDriverMethod(this.driver, 'setOrientation', 'client.setOrientation')(orientation);
   }
 }
