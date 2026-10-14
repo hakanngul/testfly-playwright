@@ -126,7 +126,8 @@ export class StepScanner {
 
     return `${keyword}(${quote(pattern)}, async (${fixtureArgs}${paramArgs}) => {
   await step.info(${quote(step.text)});
-  // TODO: implement step definition
+  // TODO: implement step definition, then remove the throw below.
+  throw new Error(${quote(`Step not implemented: ${step.text}`)});
 });`;
   }
 
