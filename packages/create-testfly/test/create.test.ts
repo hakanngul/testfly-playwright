@@ -2,11 +2,15 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import { afterEach, describe, expect, it } from 'vitest';
-import { projectTemplates } from '../../playwright/src/cli/templates';
 
 const root = path.resolve(__dirname, '..');
+// Built by the `pretest` script (`pnpm build` of this package and its workspace dependencies).
 const bin = path.join(root, 'dist', 'index.js');
+// `testfly init` of the published @testfly/playwright package: the source of truth for the templates.
+const testflyPkg = createRequire(import.meta.url).resolve('@testfly/playwright/package.json');
+const testflyBin = path.join(path.dirname(testflyPkg), (JSON.parse(fs.readFileSync(testflyPkg, 'utf8')) as { bin: { testfly: string } }).bin.testfly);
 const created: string[] = [];
 
 function tmp(): string {
@@ -29,7 +33,11 @@ const files = (dir: string): string[] =>
     .map((e) => path.relative(dir, path.join(e.parentPath, e.name)).split(path.sep).join('/'))
     .sort();
 
-describe.skipIf(!fs.existsSync(bin))('create-testfly (built binary)', () => {
+describe('create-testfly (built binary)', () => {
+  it('is built (run `pnpm test`, whose pretest builds it)', () => {
+    expect(fs.existsSync(bin), `${bin} is missing`).toBe(true);
+  });
+
   const ownVersion = (JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')) as { version: string }).version;
 
   it('scaffolds the base project', () => {
@@ -124,14 +132,23 @@ describe.skipIf(!fs.existsSync(bin))('create-testfly (built binary)', () => {
 describe('templates stay in sync with `testfly init`', () => {
   const tplRoot = path.join(root, 'templates');
 
+  function init(args: string[]): string {
+    const cwd = tmp();
+    const r = spawnSync(process.execPath, [testflyBin, 'init', ...args], { cwd, encoding: 'utf8' });
+    expect(r.status, r.stderr).toBe(0);
+    return cwd;
+  }
+
   it('base + bdd templates equal the init templates (modulo gitignore)', () => {
-    const base = projectTemplates({ bdd: false });
-    for (const [rel, content] of Object.entries(base)) {
-      expect(fs.readFileSync(path.join(tplRoot, 'base', rel), 'utf8'), `base/${rel}`).toBe(content);
+    const base = init(['--no-bdd']);
+    const baseFiles = files(base).filter((rel) => rel !== '.gitignore');
+    expect(baseFiles).toEqual(['locators/todo.yaml', 'playwright.config.ts', 'tests/example.spec.ts']);
+    for (const rel of baseFiles) {
+      expect(fs.readFileSync(path.join(tplRoot, 'base', rel), 'utf8'), `base/${rel}`).toBe(read(base, rel));
     }
-    const bdd = projectTemplates({ bdd: true });
+    const bdd = init([]);
     for (const rel of ['playwright.config.ts', 'features/todo.feature', 'steps/todo.steps.ts']) {
-      expect(fs.readFileSync(path.join(tplRoot, 'bdd', rel), 'utf8'), `bdd/${rel}`).toBe(bdd[rel]);
+      expect(fs.readFileSync(path.join(tplRoot, 'bdd', rel), 'utf8'), `bdd/${rel}`).toBe(read(bdd, rel));
     }
   });
 
