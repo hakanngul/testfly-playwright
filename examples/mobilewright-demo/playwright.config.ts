@@ -1,15 +1,17 @@
-import { defineConfig, devices } from '@playwright/test';
-import { defineBddConfig } from '@testfly/playwright';
+import { devices } from '@playwright/test';
+import { defineConfig } from '@testfly/playwright/config';
 
-const testDir = defineBddConfig({
-  features: 'features/*.feature',
-  steps: ['steps/*.steps.ts'],
-  importTestFrom: require.resolve('@testfly/playwright'),
-  disableWarnings: { importTestFrom: true },
-});
-
+// Mobile WEB via Playwright device emulation (iPhone 15 viewport, touch, user agent).
+// Native iOS/Android automation is not available yet (@testfly/mobile is experimental).
 export default defineConfig({
-  testDir,
+  testfly: {
+    baseUrl: 'https://demo.playwright.dev',
+    locators: { dir: 'locators' },
+    bdd: {
+      features: 'features/*.feature',
+      steps: 'steps/*.steps.ts',
+    },
+  },
   outputDir: 'reports/test-results',
   timeout: 45000,
   fullyParallel: true,
@@ -24,9 +26,9 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   projects: [
+    // Inherits the generated BDD test directory.
     {
       name: 'mobile-bdd',
-      testDir,
     },
     {
       name: 'mobile-specs',

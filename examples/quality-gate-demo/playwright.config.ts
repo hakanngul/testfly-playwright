@@ -1,16 +1,17 @@
-import { defineConfig, devices } from '@playwright/test';
-import { defineBddConfig } from '@testfly/playwright';
-
-const testDir = defineBddConfig({
-  features: 'features/*.feature',
-  steps: ['steps/*.steps.ts'],
-  importTestFrom: require.resolve('@testfly/playwright'),
-  disableWarnings: { importTestFrom: true },
-});
+import { devices } from '@playwright/test';
+import { defineConfig } from '@testfly/playwright/config';
 
 export default defineConfig({
-  testDir,
+  testfly: {
+    baseUrl: 'https://demo.playwright.dev/todomvc',
+    bdd: {
+      features: 'features/*.feature',
+      steps: 'steps/*.steps.ts',
+    },
+  },
   outputDir: 'reports/test-results',
+  // Keep visual baselines outside the generated (git-ignored) BDD directory.
+  snapshotPathTemplate: 'snapshots/{projectName}/{arg}{ext}',
   timeout: 30000,
   fullyParallel: true,
   reporter: [
@@ -19,14 +20,13 @@ export default defineConfig({
     ['allure-playwright', { resultsDir: 'reports/allure-results' }],
   ],
   use: {
-    baseURL: 'https://demo.playwright.dev/todomvc',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
   projects: [
+    // Inherits the generated BDD test directory.
     {
       name: 'quality-bdd',
-      testDir,
       use: { ...devices['Desktop Chrome'] },
     },
     {

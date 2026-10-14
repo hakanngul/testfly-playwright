@@ -7,19 +7,24 @@ test.describe('TestFly Enterprise Standart Spec Testleri', () => {
     expect(res.status).toBe(200);
     expect(res.data.id).toBe(1);
 
-    await step.info('Veritabanı tablosuna kayıt ekleniyor');
-    const user = await db.users.create({ name: 'TestFly User', role: 'admin' });
+    await step.info('Veritabanı tablosuna kayıt ekleniyor (in-memory mock db)');
+    const user = await db.mock!.table('users').create({ name: 'TestFly User', role: 'admin' });
     expect(user.id).toBeDefined();
     expect(user.role).toBe('admin');
   });
 
-  test('2. Redis & Cache Fixture Akışı', async ({ db, step }) => {
-    await step.info('Redis önbelleğine oturum tokeni yazılıyor');
-    await db.redis.set('user:session:99', { token: 'jwt-xyz', active: true });
+  test.describe('Redis', () => {
+    // The `redis` fixture needs testfly.redis (set REDIS_URL and install ioredis); skipped otherwise.
+    test.skip(!process.env.REDIS_URL, 'REDIS_URL tanımlı değil (testfly.redis yapılandırılmadı)');
 
-    await step.info('Redis anahtar varlığı ve içeriği doğrulanıyor');
-    await db.redis.assertExists('user:session:99');
-    await db.redis.assertValue('user:session:99', { token: 'jwt-xyz', active: true });
+    test('2. Redis & Cache Fixture Akışı', async ({ redis, step }) => {
+      await step.info('Redis önbelleğine oturum tokeni yazılıyor');
+      await redis.set('user:session:99', { token: 'jwt-xyz', active: true });
+
+      await step.info('Redis anahtar varlığı ve içeriği doğrulanıyor');
+      expect(await redis.exists('user:session:99')).toBe(true);
+      expect(await redis.getJson('user:session:99')).toEqual({ token: 'jwt-xyz', active: true });
+    });
   });
 
   test('3. Smart Network & API Route Mocking Akışı', async ({ page, mock, step }) => {
@@ -67,11 +72,11 @@ test.describe('TestFly Enterprise Standart Spec Testleri', () => {
     expect(phone.startsWith('+90 5')).toBe(true);
   });
 
-  test('6. Core Web Vitals & Sayfa Performans Denetimi', async ({ page, performance, step }) => {
+  test('6. Core Web Vitals & Sayfa Performans Denetimi', async ({ page, perf, step }) => {
     await step.info('Sayfa yükleniyor ve Web Vitals metrikleri ölçülüyor');
     await page.goto('https://demo.playwright.dev/todomvc');
 
-    const vitals = await performance.getVitals();
+    const vitals = await perf.getVitals();
     expect(vitals).toBeDefined();
     expect(vitals.domContentLoaded).toBeGreaterThanOrEqual(0);
     expect(vitals.ttfb).toBeGreaterThanOrEqual(0);

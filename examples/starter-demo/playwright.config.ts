@@ -1,12 +1,6 @@
-import { defineConfig, devices } from '@playwright/test';
-import { defineBddConfig, cucumberReporter } from '@testfly/playwright';
-
-const testDir = defineBddConfig({
-  features: 'features/*.feature',
-  steps: ['steps/*.steps.ts', 'steps/**/*.steps.ts'],
-  importTestFrom: require.resolve('@testfly/playwright'),
-  disableWarnings: { importTestFrom: true },
-});
+import { devices } from '@playwright/test';
+import { defineConfig } from '@testfly/playwright/config';
+import { cucumberReporter } from '@testfly/playwright/bdd';
 
 const reporters: any[] = [
   ['html', { outputFolder: 'reports/playwright', open: 'never' }],
@@ -23,20 +17,27 @@ try {
 }
 
 export default defineConfig({
-  testDir,
+  testfly: {
+    baseUrl: 'https://www.saucedemo.com',
+    env: 'local',
+    api: { baseUrl: 'https://api.escuelajs.co' },
+    bdd: {
+      features: 'features/*.feature',
+      steps: ['steps/*.steps.ts', 'steps/**/*.steps.ts'],
+    },
+  },
   outputDir: 'reports/test-results',
   timeout: 30000,
   fullyParallel: true,
   reporter: reporters,
   use: {
-    baseURL: 'https://www.saucedemo.com',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
   projects: [
+    // Inherits the generated BDD test directory.
     {
       name: 'bdd-tests',
-      testDir,
       use: { ...devices['Desktop Chrome'], channel: 'chrome' },
     },
     {

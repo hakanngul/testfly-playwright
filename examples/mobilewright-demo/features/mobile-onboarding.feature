@@ -1,4 +1,4 @@
-@mobile @ios @android
+@mobile @onboarding
 Feature: Mobile App Onboarding Flow
 
   Scenario: User swipes through onboarding cards and taps get started

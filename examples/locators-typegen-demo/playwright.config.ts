@@ -1,15 +1,16 @@
-import { defineConfig, devices } from '@playwright/test';
-import { defineBddConfig, cucumberReporter } from '@testfly/playwright';
-
-const testDir = defineBddConfig({
-  features: 'features/*.feature',
-  steps: ['steps/*.steps.ts'],
-  importTestFrom: require.resolve('@testfly/playwright'),
-  disableWarnings: { importTestFrom: true },
-});
+import { devices } from '@playwright/test';
+import { defineConfig } from '@testfly/playwright/config';
 
 export default defineConfig({
-  testDir,
+  testfly: {
+    baseUrl: 'https://www.saucedemo.com',
+    // YAML locator catalog; run `testfly locators` to regenerate locators/index.d.ts.
+    locators: { dir: 'locators' },
+    bdd: {
+      features: 'features/*.feature',
+      steps: 'steps/*.steps.ts',
+    },
+  },
   outputDir: 'reports/test-results',
   timeout: 30000,
   fullyParallel: true,
@@ -19,14 +20,15 @@ export default defineConfig({
     ['allure-playwright', { resultsDir: 'reports/allure-results' }],
   ],
   use: {
-    baseURL: 'https://www.saucedemo.com',
+    // SauceDemo marks elements with `data-test="..."` (used by `testid:` locators).
+    testIdAttribute: 'data-test',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
   projects: [
+    // Inherits the generated BDD test directory.
     {
       name: 'bdd-tests',
-      testDir,
       use: { ...devices['Desktop Chrome'] },
     },
     {

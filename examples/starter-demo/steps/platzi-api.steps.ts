@@ -1,7 +1,10 @@
-import { When, Then, expect } from '@testfly/playwright';
-import { ApiResponse } from '@testfly/playwright';
+import { When, Then, expect } from '@testfly/playwright/bdd';
+import type { ApiClient } from '@testfly/playwright';
 
-let lastApiResponse: ApiResponse<any>;
+// The response class is not exported by name; derive its type from the `api` fixture.
+type ApiResponse = Awaited<ReturnType<ApiClient['get']>> & { data: any };
+
+let lastApiResponse: ApiResponse;
 let createdProductId: number;
 let jwtToken: string;
 
