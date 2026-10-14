@@ -1,11 +1,12 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { isAbsolute, join, relative, resolve, sep } from 'node:path';
-import type { FullConfig, FullResult, Reporter, Suite, TestCase, TestResult } from '@playwright/test/reporter';
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import type { FullConfig, FullResult, Reporter, Suite, TestCase, TestError, TestResult } from '@playwright/test/reporter';
 import { detectCi } from './ci';
 import { generateDashboard } from './dashboard';
 import { computeFlakiness } from './flakiness';
 import { evaluateGate, type QualityGateOptions } from './gate';
 import { pruneHistory, readHistory, writeRun } from './history';
+import { loadQuarantine, matchQuarantine, type QuarantineList } from './quarantine';
 import {
   ApiEventSchema,
   AiEventSchema,
@@ -30,7 +31,12 @@ import { stripAnsi, triageFailure } from './triage';
 export interface TestFlyReporterOptions {
   /** Directory for history and the report. Default `.testfly`. */
   outputDir?: string;
-  /** Quarantine file (informational; the core fixture applies it). Default `testfly-quarantine.yml`. */
+  /**
+   * Quarantine file, resolved relative to the Playwright config directory. Default `testfly-quarantine.yml`.
+   * Tests matching an entry are recorded as quarantined even without the `@testfly/playwright` fixture
+   * (which skips them up front), so their failures neither count as failed nor fail the run or the quality gate.
+   * A missing file means no quarantine; an invalid file is reported as a warning and ignored.
+   */
   quarantineFile?: string;
   /** Number of runs kept in history and used for the Flakiness Radar. Default 20. */
   historySize?: number;
@@ -69,6 +75,9 @@ export default class TestFlyReporter implements Reporter {
   private config?: FullConfig;
   private readonly tests = new Map<string, Accumulator>();
   private warnings = 0;
+  private quarantine: QuarantineList = { entries: [], expired: [] };
+  private quarantineBaseDir = process.cwd();
+  private globalErrors = 0;
 
   constructor(options: TestFlyReporterOptions = {}) {
     this.options = {
@@ -88,6 +97,16 @@ export default class TestFlyReporter implements Reporter {
   onBegin(config: FullConfig, _suite: Suite): void {
     this.startedAt = Date.now();
     this.config = config;
+    this.quarantineBaseDir = config.configFile ? dirname(config.configFile) : process.cwd();
+    try {
+      this.quarantine = loadQuarantine(resolve(this.quarantineBaseDir, this.options.quarantineFile));
+    } catch (e) {
+      this.warn(`quarantine file ignored: ${(e as Error).message}`);
+    }
+  }
+
+  onError(_error: TestError): void {
+    this.globalErrors++;
   }
 
   onTestEnd(test: TestCase, result: TestResult): void {
@@ -213,14 +232,26 @@ export default class TestFlyReporter implements Reporter {
     return out;
   }
 
+  private matchQuarantineFile(test: TestCase, project: string, titlePath: string[]): { reason?: string } | null {
+    if (this.quarantine.entries.length === 0) return null;
+    return matchQuarantine(this.quarantine, {
+      file: toPosix(relative(this.quarantineBaseDir, test.location.file)),
+      titlePath,
+      tags: [...(test.tags ?? [])],
+      project,
+    });
+  }
+
   private buildRecord(acc: Accumulator): TestRecord {
     const { test } = acc;
     const results = acc.results.filter(Boolean);
     const last = results[results.length - 1];
     const { project, file, titlePath } = this.titlePathOf(test);
     const outcome = test.outcome();
-    const quarantine = [...(last?.annotations ?? []), ...test.annotations].find((a) => a.type === 'quarantine');
-    const quarantined = quarantine !== undefined;
+    const annotation = [...(last?.annotations ?? []), ...test.annotations].find((a) => a.type === 'quarantine');
+    const listed = annotation ? null : this.matchQuarantineFile(test, project, titlePath);
+    const quarantined = annotation !== undefined || listed !== null;
+    const quarantineReason = annotation ? annotation.description : listed?.reason;
 
     let status: TestRecord['status'];
     let flaky = false;
@@ -261,7 +292,7 @@ export default class TestFlyReporter implements Reporter {
       status,
       flaky,
       quarantined,
-      quarantineReason: quarantine?.description,
+      quarantineReason,
       retries: Math.max(0, results.length - 1),
       durationMs: Math.round(results.reduce((sum, r) => sum + r.duration, 0)),
       error,
@@ -279,7 +310,11 @@ export default class TestFlyReporter implements Reporter {
     const tests = [...this.tests.values()].map((a) => this.buildRecord(a));
     const totals = computeTotals(tests);
     const shard = this.config?.shard ?? undefined;
-    const status: RunRecord['status'] = result.status === 'passed' && totals.failed > 0 ? 'failed' : result.status;
+    // Playwright fails the run for quarantined failures too; when they are the only failures
+    // (no global errors, nothing interrupted/timed out) the run is treated as passed.
+    const onlyQuarantinedFailed =
+      result.status === 'failed' && totals.failed === 0 && this.globalErrors === 0 && tests.some((t) => t.quarantined && t.status !== 'passed' && t.status !== 'skipped');
+    const status: RunRecord['status'] = onlyQuarantinedFailed ? 'passed' : result.status === 'passed' && totals.failed > 0 ? 'failed' : result.status;
     const record = RunRecordSchema.parse({
       schemaVersion: SCHEMA_VERSION,
       runId: `${new Date(this.startedAt).toISOString().replace(/[:.]/g, '-')}-${Math.random().toString(36).slice(2, 8)}`,
@@ -341,7 +376,8 @@ export default class TestFlyReporter implements Reporter {
     if (this.options.printSummary) {
       printSummary({ record, gate, gateConfigured: this.options.qualityGate !== undefined, flakiness, dashboardFile, warnings: this.warnings });
     }
-    return gate.passed ? undefined : { status: 'failed' };
+    if (!gate.passed) return { status: 'failed' };
+    return onlyQuarantinedFailed ? { status: 'passed' } : undefined;
   }
 }
 

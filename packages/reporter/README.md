@@ -27,7 +27,7 @@ After a run open `.testfly/report/index.html`.
 | Option | Default | Description |
 | --- | --- | --- |
 | `outputDir` | `.testfly` | Holds `history/` and `report/` (relative to the current working directory). |
-| `quarantineFile` | `testfly-quarantine.yml` | Quarantine list (applied by the test fixture; see below). |
+| `quarantineFile` | `testfly-quarantine.yml` | Quarantine list, relative to the Playwright config dir. The fixture skips matching tests; the reporter also marks them quarantined, so without the fixture their failures neither count as failed nor fail the run/gate (see below). |
 | `historySize` | `20` | Run files kept; also the window of the Flakiness Radar. |
 | `env` | `$TESTFLY_ENV` | Environment label stored with the run. |
 | `qualityGate.minPassRate` | - | Minimum pass rate in percent (0-100) over executed tests. |
