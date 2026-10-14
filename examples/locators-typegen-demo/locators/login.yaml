@@ -1,13 +1,20 @@
-page: login
-elements:
-  username_field:
-    testid: "username"
-    name: "Username"
-  password_field:
-    testid: "password"
-    name: "Password"
-  login_button:
-    testid: "login-button"
-    name: "Login"
-  error_message:
-    testid: "error"
+# Page "login": keys are used as locate('login.<name>').
+# SauceDemo uses `data-test` attributes, so playwright.config.ts sets use.testIdAttribute = 'data-test'.
+username_field:
+  testid: username
+  fallbacks:
+    - placeholder: Username
+
+password_field:
+  testid: password
+  fallbacks:
+    - placeholder: Password
+
+login_button:
+  testid: login-button
+  fallbacks:
+    - role: button
+      name: Login
+
+error_message:
+  testid: error

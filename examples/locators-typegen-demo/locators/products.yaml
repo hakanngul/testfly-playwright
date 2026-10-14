@@ -1,10 +1,12 @@
-page: products
-elements:
-  title:
-    css: ".title"
-  inventory_item:
-    css: ".inventory_item"
-  add_to_cart_btn:
-    css: "button[id^='add-to-cart']"
-  cart_badge:
-    css: ".shopping_cart_badge"
+# Page "products": keys are used as locate('products.<name>').
+title:
+  css: ".title"
+
+inventory_item:
+  css: ".inventory_item"
+
+add_to_cart_btn:
+  css: "button[id^='add-to-cart']"
+
+cart_badge:
+  css: ".shopping_cart_badge"
