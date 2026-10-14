@@ -1,7 +1,8 @@
 import { spawn } from 'node:child_process';
-import { copyFileSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import ts from 'typescript';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { JsonFileCache, stableStringify } from '../src/cache/json-file-cache';
 import { actionKey, intentKey, normalizeGoal, urlPattern } from '../src/cache/keys';
@@ -114,21 +115,24 @@ describe('JsonFileCache', () => {
 
   it('multiple processes writing concurrently lose no entries', async () => {
     const file = join(dir, 'proc.json');
-    const script = join(dir, 'w.mts');
-    // The module has no relative imports: copy it as .mts so plain node can run it as ESM.
-    copyFileSync(join(__dirname, '..', 'src', 'cache', 'json-file-cache.ts'), join(dir, 'json-file-cache.mts'));
+    const script = join(dir, 'w.mjs');
+    // The module has no relative imports: transpile it to plain ESM so any Node >= 22 can run it
+    // (no reliance on --experimental-transform-types / type stripping flags).
+    const source = readFileSync(join(__dirname, '..', 'src', 'cache', 'json-file-cache.ts'), 'utf8');
+    const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } });
+    writeFileSync(join(dir, 'json-file-cache.mjs'), outputText);
     writeFileSync(
       script,
       `
-      import { JsonFileCache } from './json-file-cache.mts';
+      import { JsonFileCache } from './json-file-cache.mjs';
       const [file, id] = process.argv.slice(2);
-      const c = new JsonFileCache<string>(file);
+      const c = new JsonFileCache(file);
       (async () => {
         for (let i = 0; i < 15; i++) await c.set('p' + id + '-' + i, 'v' + id);
       })();
       `,
     );
-    const nodeArgs = ['--experimental-transform-types', '--no-warnings', script, file];
+    const nodeArgs = [script, file];
     const run = (id: string): Promise<number> =>
       new Promise((resolve, reject) => {
         const p = spawn(process.execPath, [...nodeArgs, id], { stdio: ['ignore', 'inherit', 'inherit'] });

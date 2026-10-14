@@ -24,7 +24,7 @@ function run(env: Record<string, string>, match = '*.pw.ts') {
   const proc = spawnSync(process.execPath, [CLI, 'test', '-c', PROJECT], {
     cwd: PROJECT,
     encoding: 'utf8',
-    env: { ...process.env, PW_JSON_OUT: jsonOut, FAKE_LLM_LOG: log, AI_CACHE_DIR: cacheDir, PW_MATCH: match, PW_OUTPUT_DIR: join(tmp, `${id}-results`), ...env },
+    env: { ...process.env, PW_JSON_OUT: jsonOut, FAKE_LLM_LOG: log, AI_CACHE_DIR: cacheDir, PW_MATCH: match, PW_OUTPUT_DIR: join(tmp, `${id}-results`), TESTFLY_REPORT_DIR: join(tmp, `${id}-testfly`), ...env },
     timeout: 120_000,
   });
   const report = existsSync(jsonOut) ? JSON.parse(readFileSync(jsonOut, 'utf8')) : { suites: [] };
