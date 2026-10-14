@@ -2,37 +2,63 @@ name: TestFly CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main]
   pull_request:
-    branches: [ main, master ]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
-    name: TestFly Monorepo Test & Build
+    name: Build, typecheck & test (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # pnpm version comes from the root package.json "packageManager" field.
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
+          node-version: ${{ matrix.node }}
+          cache: pnpm
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Build packages
-        run: npm run build
+        run: pnpm build
 
-      - name: Run Package Unit Tests
-        run: npm test --workspace=@testfly/playwright
+      - name: Typecheck
+        run: pnpm typecheck
 
       - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
+        run: pnpm --filter @testfly/playwright exec playwright install --with-deps chromium
 
-      - name: Run Demo Suite Tests
-        run: npm run test:demo
+      # Test helpers fall back to a sandbox path when PW_CHROMIUM_PATH is unset,
+      # so point it at the Chromium that Playwright just installed (its default).
+      - name: Export Playwright Chromium path
+        run: |
+          path="$(pnpm --filter @testfly/playwright exec node -e "process.stdout.write(require('@playwright/test').chromium.executablePath())")"
+          echo "PW_CHROMIUM_PATH=$path" >> "$GITHUB_ENV"
+
+      - name: Test
+        run: pnpm test
+
+      - name: Lint package exports (publint / attw)
+        run: pnpm lint:package
