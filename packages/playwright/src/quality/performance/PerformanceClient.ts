@@ -38,7 +38,9 @@ export class PerformanceClient {
 
       const observe = (type: string): Promise<PerformanceEntry[] | null> =>
         new Promise((resolve) => {
-          if (!PerformanceObserver.supportedEntryTypes?.includes(type)) return resolve(null);
+          // No `?.` or `??` inside this callback: the CJS build rewrites them into helpers that do not exist in the page.
+          const supported = PerformanceObserver.supportedEntryTypes;
+          if (!supported || !supported.includes(type)) return resolve(null);
           const seen: PerformanceEntry[] = [];
           const observer = new PerformanceObserver((list) => seen.push(...list.getEntries()));
           observer.observe({ type, buffered: true });
@@ -55,7 +57,7 @@ export class PerformanceClient {
         ? Number(
             shifts
               .filter((e) => !(e as PerformanceEntry & { hadRecentInput?: boolean }).hadRecentInput)
-              .reduce((sum, e) => sum + ((e as PerformanceEntry & { value?: number }).value ?? 0), 0)
+              .reduce((sum, e) => sum + ((e as PerformanceEntry & { value?: number }).value || 0), 0)
               .toFixed(4),
           )
         : null;
