@@ -24,7 +24,7 @@ function describeOne(def: LocatorDef): string {
     case 'title': s = `getByTitle(${q(def.title!)}${opts(def, false)})`; break;
     case 'xpath': s = `locator(${q('xpath=' + def.xpath!)})`; break;
     case 'css': s = `locator(${q(def.css!)})`; break;
-    default: s = 'locator(?)';
+    default: s = def.platforms ? 'mobile-only' : 'locator(?)';
   }
   if (def.has_text !== undefined) s += `.filter({ hasText: ${q(def.has_text)} })`;
   if (def.nth !== undefined) s += `.nth(${def.nth})`;

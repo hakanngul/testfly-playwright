@@ -43,6 +43,7 @@ export default defineConfig({
     db: { client: 'postgres', connectionString: '${DATABASE_URL}' },
     mail: { provider: 'mailpit', url: 'http://localhost:8025' },
     consoleErrors: { mode: 'report', ignore: ['ResizeObserver loop'] },
+    // mobile: { platform: 'ios', bundleId: 'com.example.app' }, // native devices via @testfly/mobile
     reporter: {
       qualityGate: { minPassRate: 95, maxFlaky: 3 },
       notifications: { slack: '${SLACK_WEBHOOK_URL}', on: 'failure' },
@@ -159,6 +160,8 @@ price: ".price"            # string = CSS
 
 Selector fields (exactly one): `role` (+ `name`, `exact`, `level`), `label`, `text`, `testid`, `placeholder`, `alt`, `title`, `css`, `xpath`. Modifiers: `nth`, `first`, `last`, `has_text`, `within`, `fallbacks`. Run `testfly locators` to generate `locators/index.d.ts`.
 
+`ios:`, `android:` and `mobile:` blocks hold native definitions used by [`@testfly/mobile`](../mobile/README.md) (`mobileLocate`). A plain string there is a test id. The web `locate()` ignores these blocks and rejects entries that only have native definitions (`TF_LOCATOR_INVALID`).
+
 Healing order: primary → `fallbacks` → rules (10) → fuzzy (20) → AI (100, `healing.mode: 'ai'` with `@testfly/ai`). Heals are attached as `application/vnd.testfly.heal+json` and reported. Add your own with `registerHealingStrategy({ name, priority, heal })`.
 
 ## BDD
@@ -184,6 +187,8 @@ Then('the cart shows {int} item(s)', async ({ locate }, count: number) => {
   await expect(locate('cart.badge')).toHaveText(String(count));
 });
 ```
+
+`bdd.importTestFrom` points playwright-bdd at another `test` (a module path or package specifier, resolved from the project), for example `'@testfly/mobile/bdd'` or your own file that extends `@testfly/playwright/bdd`. Default: `@testfly/playwright/bdd`.
 
 ## CLI
 

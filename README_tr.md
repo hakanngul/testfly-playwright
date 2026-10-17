@@ -18,9 +18,9 @@ Bu depo bir pnpm monorepo'sudur (`packages/*`):
 | [`@testfly/reporter`](./packages/reporter/README.md) | Bağımsız Playwright reporter'ı: koşum geçmişi, Flakiness Radar, kural tabanlı hata sınıflandırma (triage), karantina, kalite kapıları, LPT sharding, HTML dashboard. |
 | [`@testfly/ai`](./packages/ai/README.md) | Opsiyonel AI katmanı: `ai.act()`, `ai.byIntent()`, `toSatisfyAi` / `toViolateAi`, AI healing stratejisi, isteğe bağlı hata analizi reporter'ı, kayıt/tekrar (record/replay) önbelleği. |
 | [`create-testfly`](./packages/create-testfly/README.md) | Proje iskelet oluşturucu: `npm create testfly@latest`. |
-| `@testfly/mobile` | **Deneysel, private, yayınlanmıyor.** Henüz gerçek bir cihaz sürücüsü olmayan mobil yardımcılar. Desteklenen API'nin parçası değildir. |
+| [`@testfly/mobile`](./packages/mobile/README.md) | **Deneysel, private, yayınlanmıyor.** [Mobilewright](https://mobilewright.dev) üzerinde native iOS/Android testleri (cihazları mobilecli sürer): `device`, `mobileScreen`, `mobileLocate` fixture'ları. Desteklenen API'nin parçası değildir. |
 
-Tasarım kararları [`docs/adr/ADR-001.md`](./docs/adr/ADR-001.md) dosyasında kayıtlıdır.
+Tasarım kararları [`docs/adr/`](./docs/adr/) altında kayıtlıdır ([ADR-001](./docs/adr/ADR-001.md), [ADR-002](./docs/adr/ADR-002.md)).
 
 ---
 
@@ -94,7 +94,7 @@ submit:
 error_banner: ".alert-error" # düz bir string CSS seçicisidir
 ```
 
-Her tanım tam olarak bir seçici alanı kullanır: `role` (opsiyonel `name`, `exact`, `level` ile), `label`, `text`, `testid`, `placeholder`, `alt`, `title`, `css` veya `xpath`. Değiştiriciler: `nth`, `first`, `last`, `has_text`, `within` (üst locator'ın anahtarı) ve `fallbacks`. `web:` anahtarı tanımın takma adı olarak kabul edilir; `ios`/`android`/`mobile` anahtarları şu an yok sayılır.
+Her tanım tam olarak bir seçici alanı kullanır: `role` (opsiyonel `name`, `exact`, `level` ile), `label`, `text`, `testid`, `placeholder`, `alt`, `title`, `css` veya `xpath`. Değiştiriciler: `nth`, `first`, `last`, `has_text`, `within` (üst locator'ın anahtarı) ve `fallbacks`. `web:` anahtarı tanımın takma adı olarak kabul edilir. `ios:`, `android:` ve `mobile:` blokları [`@testfly/mobile`](./packages/mobile/README.md) için native tanımları taşır; web `locate()` bunları kullanmaz.
 
 IDE otomatik tamamlaması için tipli anahtarları üretin (`locators/index.d.ts` yazar). Derleme zamanında her string kabul edilir; bilinmeyen bir anahtar çalışma zamanında `TF_LOCATOR_NOT_FOUND` ile hata verir:
 
@@ -303,7 +303,24 @@ LLM tabanlı kök neden analizi ayrı ve isteğe bağlı olarak `@testfly/ai/rep
 
 ## Mobil
 
-`packages/mobile` **deneysel** mobil yardımcılar içerir. Private'tır, yayınlanmaz, gerçek bir cihaz sürücüsü yoktur ve desteklenen API kapsamında değildir. Native iOS/Android otomasyonu bugün mevcut değildir.
+`@testfly/mobile`, [Mobilewright](https://mobilewright.dev) üzerinde **deneysel** native iOS/Android testi ekler. Mobilewright simülatörleri, emülatörleri ve gerçek cihazları mobilecli ile sürer (Appium yok). Paket private'tır, yayınlanmaz ve desteklenen API kapsamında değildir. `mobilewright` opsiyonel bir peer bağımlılıktır.
+
+```ts
+// playwright.config.ts → testfly
+mobile: { platform: 'ios', bundleId: 'com.example.app' },
+```
+
+```ts
+import { test, expect } from '@testfly/mobile';
+
+test('giriş', async ({ mobileLocate }) => {
+  await mobileLocate('login.username').fill('ada');   // YAML'daki ios:/android:/mobile: bloğu
+  await mobileLocate('login.signIn').tap();
+  await expect(mobileLocate('home.greeting')).toHaveText('Hello, ada');
+});
+```
+
+BDD adımları `@testfly/mobile/bdd` içinden import edilir (`testfly.bdd.importTestFrom: '@testfly/mobile/bdd'`). Ayrıntılar: [`packages/mobile/README.md`](./packages/mobile/README.md), [ADR-002](./docs/adr/ADR-002.md).
 
 ---
 
@@ -321,6 +338,7 @@ Node.js >= 22 ve pnpm 10 gerektirir.
 ## Dokümantasyon
 
 - [ADR-001: temel kararlar](./docs/adr/ADR-001.md)
+- [ADR-002: Mobilewright üzerinde native mobil test](./docs/adr/ADR-002.md)
 - [Mimari (`ARCHITECTURE.md`)](./ARCHITECTURE.md)
 - [MVP spesifikasyonu (`MVP_SPEC.md`)](./MVP_SPEC.md)
 - [Yol haritası (`ROADMAP.md`)](./ROADMAP.md)

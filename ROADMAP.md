@@ -58,5 +58,5 @@ Bu doküman TestFly'ın fazlarını ve kilometre taşlarını içerir. İşaretl
 
 ## 1.0 Sonrası
 
-- [ ] `@testfly/mobile`: gerçek bir sürücüyle native iOS/Android desteği (paket şu an deneysel ve private).
-- [ ] Locator YAML'ında `ios`/`android` platform anahtarlarının desteklenmesi (şu an yok sayılıyor).
+- [~] `@testfly/mobile`: Mobilewright (mobilecli) üzerinde native iOS/Android desteği ([ADR-002](./docs/adr/ADR-002.md)). Fixture'lar, YAML platform blokları ve BDD girişi hazır; sahte sürücüyle test ediliyor. Gerçek cihaz/simülatör CI'ı ve npm yayını yok, paket deneysel ve private.
+- [x] Locator YAML'ında `ios`/`android`/`mobile` platform blokları (`mobileLocate` kullanır).

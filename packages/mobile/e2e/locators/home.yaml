@@ -1,0 +1,16 @@
+greeting:
+  mobile: greeting
+orders:
+  mobile:
+    text: Orders
+    within: home.window
+window:
+  ios:
+    type: Window
+  android:
+    type: Window
+settings:
+  mobile:
+    testid: settings-row
+    fallbacks:
+      - text: Settings

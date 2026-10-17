@@ -1,6 +1,6 @@
 import type { Locator, Page } from '@playwright/test';
 import { TestFlyError } from '../core/errors';
-import type { LocatorDef } from './types';
+import { SELECTOR_FIELDS, type LocatorDef } from './types';
 
 /** Resolves another locator definition by key (used for `within`). @internal */
 export type DefLookup = (key: string) => LocatorDef | undefined;
@@ -39,6 +39,11 @@ function buildOne(root: Root, def: LocatorDef): Locator {
  * @internal
  */
 export function buildLocator(page: Page, def: LocatorDef, lookup: DefLookup, chain: string[] = []): Locator {
+  if (!SELECTOR_FIELDS.some((f) => def[f] !== undefined)) {
+    throw new TestFlyError('TF_LOCATOR_INVALID', 'This locator only has native mobile definitions (ios/android/mobile).', {
+      hint: 'Use it from a @testfly/mobile test with mobileLocate(key), or add a web selector to the YAML entry.',
+    });
+  }
   const rootFor = (d: LocatorDef): Root => {
     if (!d.within) return page;
     if (chain.includes(d.within)) {

@@ -130,6 +130,45 @@ export const BddOptionsSchema = z.object({
   features: z.union([z.string(), z.array(z.string())]).default('features/**/*.feature'),
   steps: z.union([z.string(), z.array(z.string())]).default(['steps/**/*.ts']),
   outputDir: z.string().optional(),
+  /**
+   * Module whose `test` the generated specs import. Default `@testfly/playwright/bdd`;
+   * native mobile suites use `@testfly/mobile/bdd`.
+   */
+  importTestFrom: z.string().optional(),
+});
+
+/**
+ * Native mobile options used by `@testfly/mobile` (Mobilewright + mobilecli). Optional: web/API
+ * projects leave it out. Per-project overrides go in `use.testfly.mobile` (e.g. one project per platform).
+ */
+export const MobileOptionsSchema = z.object({
+  platform: z.enum(['ios', 'android']),
+  /** App launched before each test (iOS bundle id / Android package). */
+  bundleId: z.string().optional(),
+  /** Terminate and relaunch `bundleId` before each test. Default true. */
+  autoAppLaunch: z.boolean().default(true),
+  /** `.app`/`.ipa`/`.apk` file(s) installed before the first test. */
+  installApps: z.union([z.string(), z.array(z.string())]).optional(),
+  deviceId: z.string().optional(),
+  /** Regex (string) matched against the device name, e.g. `iPhone 16`. */
+  deviceName: z.string().optional(),
+  /** mobilecli server URL. Default: mobilecli's own (`http://localhost:12000`), started when needed. */
+  url: z.string().optional(),
+  /** Start the local mobilecli server when it is not running. Default true. */
+  autoStart: z.boolean().default(true),
+  /** Turn device animations off for stabler runs. */
+  animations: z.enum(['on', 'off']).optional(),
+  timeouts: z
+    .object({
+      connect: z.number().int().positive().optional(),
+      action: z.number().int().positive().optional(),
+      expect: z.number().int().positive().optional(),
+      appLaunch: z.number().int().positive().optional(),
+      install: z.number().int().positive().optional(),
+    })
+    .prefault({}),
+  /** Attach a device screenshot when a test fails. Default true. */
+  screenshotOnFailure: z.boolean().default(true),
 });
 
 export const ReporterOptionsSchema = z.object({
@@ -226,6 +265,7 @@ export const TestFlyOptionsSchema = z.object({
   consoleErrors: ConsoleErrorsOptionsSchema.prefault({}),
   ai: AiOptionsSchema.prefault({}),
   bdd: BddOptionsSchema.optional(),
+  mobile: MobileOptionsSchema.optional(),
   reporter: ReporterOptionsSchema.prefault({}),
   features: FeaturesSchema.prefault({}),
   /**
@@ -251,3 +291,4 @@ export type ReporterOptions = z.infer<typeof ReporterOptionsSchema>;
 export type SessionOptions = z.infer<typeof SessionOptionsSchema>;
 export type ConsoleErrorsOptions = z.infer<typeof ConsoleErrorsOptionsSchema>;
 export type FeatureFlags = z.infer<typeof FeaturesSchema>;
+export type MobileOptions = z.infer<typeof MobileOptionsSchema>;

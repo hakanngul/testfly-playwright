@@ -57,6 +57,15 @@ function resolveSelf(specifier: string, distFile: string): string {
   return specifier;
 }
 
+/** Resolve a module path from the consumer's project (falls back to the specifier). */
+function resolveFromProject(specifier: string): string {
+  try {
+    return nodeRequire.resolve(specifier, { paths: [process.cwd()] });
+  } catch {
+    return specifier;
+  }
+}
+
 function resolveReporter(): string {
   try {
     return nodeRequire.resolve('@testfly/reporter', { paths: [process.cwd(), __dirname] });
@@ -140,7 +149,7 @@ export function defineConfig(config: TestFlyConfig = {}): PlaywrightTestConfig {
       features: root.bdd.features,
       steps: root.bdd.steps,
       ...(root.bdd.outputDir ? { outputDir: root.bdd.outputDir } : {}),
-      importTestFrom: resolveSelf('@testfly/playwright/bdd', 'bdd'),
+      importTestFrom: root.bdd.importTestFrom ? resolveFromProject(root.bdd.importTestFrom) : resolveSelf('@testfly/playwright/bdd', 'bdd'),
       disableWarnings: { importTestFrom: true },
     });
     if (out.testDir === undefined) out.testDir = bddDir;

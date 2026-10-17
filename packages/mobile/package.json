@@ -2,7 +2,7 @@
   "name": "@testfly/mobile",
   "version": "0.0.0",
   "private": true,
-  "description": "Experimental mobile helpers for TestFly (device detection, driver-agnostic screen/locator API). Not published.",
+  "description": "Experimental native mobile testing for TestFly on Mobilewright (devices driven by mobilecli). Not published.",
   "license": "Apache-2.0",
   "author": "Hakan Gül",
   "repository": {
@@ -32,6 +32,16 @@
         "default": "./dist/index.js"
       }
     },
+    "./bdd": {
+      "import": {
+        "types": "./dist/bdd.d.mts",
+        "default": "./dist/bdd.mjs"
+      },
+      "require": {
+        "types": "./dist/bdd.d.ts",
+        "default": "./dist/bdd.js"
+      }
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -44,22 +54,36 @@
     "mobile",
     "ios",
     "android",
-    "testfly"
+    "testfly",
+    "mobilewright",
+    "mobilecli"
   ],
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "lint:package": "publint && attw --pack . --profile node16"
+    "lint:package": "publint && attw --pack . --profile node16",
+    "test:e2e": "playwright test -c e2e",
+    "test:bdd": "bddgen -c e2e-bdd && playwright test -c e2e-bdd"
   },
   "peerDependencies": {
-    "@testfly/playwright": "workspace:^"
+    "@playwright/test": ">=1.50.0 <2",
+    "@testfly/playwright": "workspace:^",
+    "mobilewright": ">=0.0.66 <0.1.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.0",
     "@testfly/playwright": "workspace:*",
     "@types/node": "^22.10.0",
+    "mobilewright": "0.0.66",
+    "playwright-bdd": "^9.2.1",
     "tsup": "^8.5.1",
     "typescript": "~5.9.3",
     "vitest": "^5.0.4"
+  },
+  "peerDependenciesMeta": {
+    "mobilewright": {
+      "optional": true
+    }
   }
 }

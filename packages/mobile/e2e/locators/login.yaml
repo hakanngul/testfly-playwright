@@ -1,0 +1,15 @@
+# Web and native definitions side by side: web runs use the shared keys, devices the ios/android/mobile blocks.
+username:
+  css: "#username"
+  ios: username
+  android:
+    placeholder: Username
+password:
+  css: "#password"
+  mobile:
+    label: Password
+signIn:
+  role: button
+  name: Sign in
+webOnly:
+  css: "#only-on-the-web"

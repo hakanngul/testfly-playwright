@@ -51,6 +51,8 @@ export type TestFlyErrorCode =
   // quality fixtures
   | 'TF_QUALITY_ASSERTION_FAILED'
   | 'TF_QUALITY_UNSUPPORTED'
+  // native mobile (@testfly/mobile)
+  | 'TF_MOBILE_LAUNCH_FAILED'
   // browser console
   | 'TF_CONSOLE_ERRORS'
   // reporter / quality gates

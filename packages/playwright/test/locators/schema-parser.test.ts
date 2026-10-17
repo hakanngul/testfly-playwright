@@ -75,10 +75,14 @@ describe('normalizeDef', () => {
     expect(err(() => normalizeDef({ type: 'role' }, 'p.k')).message).toMatch(/needs "role" or "value"/);
   });
 
-  it('web: alias merges into the definition; ios/android/mobile ignored', () => {
-    expect(normalizeDef({ web: { role: 'button', name: 'A' }, ios: { accessibility_id: 'x' }, android: { id: 'y' } }, 'p.k')).toEqual({ role: 'button', name: 'A' });
+  it('web: alias merges into the definition; ios/android/mobile become platform definitions', () => {
+    expect(normalizeDef({ web: { role: 'button', name: 'A' }, ios: { label: 'Sign In' }, android: 'login_btn' }, 'p.k')).toEqual({
+      role: 'button',
+      name: 'A',
+      platforms: { ios: { label: 'Sign In' }, android: { testid: 'login_btn' } },
+    });
     expect(normalizeDef({ web: '#a' }, 'p.k')).toEqual({ css: '#a' });
-    expect(normalizeDef({ css: '#a', ios: 'whatever', android: { zz: 1 }, mobile: 1 }, 'p.k')).toEqual({ css: '#a' });
+    expect(normalizeDef({ css: '#a', mobile: { role: 'button', name: 'Go' } }, 'p.k')).toEqual({ css: '#a', platforms: { mobile: { role: 'button', name: 'Go' } } });
     expect(normalizeDef({ web: { css: '#a' }, fallbacks: ['#b'] }, 'p.k').fallbacks).toEqual([{ css: '#b' }]);
     expect(err(() => normalizeDef({ web: 5 }, 'p.k')).code).toBe('TF_LOCATOR_INVALID');
   });

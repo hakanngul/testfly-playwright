@@ -59,6 +59,7 @@ export type {
   SessionOptions,
   ConsoleErrorsOptions,
   FeatureFlags,
+  MobileOptions,
 } from './core/config/schema';
 
 // Helpers handed to tests (types only)

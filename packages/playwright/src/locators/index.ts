@@ -5,3 +5,4 @@ export * from './LocatorRegistry';
 export * from './describe';
 export * from './createLocate';
 export * from './healing';
+export { selectPlatformDef } from './schema';

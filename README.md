@@ -18,9 +18,9 @@ This repository is a pnpm monorepo (`packages/*`):
 | [`@testfly/reporter`](./packages/reporter/README.md) | Standalone Playwright reporter: run history, Flakiness Radar, rule-based failure triage, quarantine, quality gates, LPT sharding, HTML dashboard. |
 | [`@testfly/ai`](./packages/ai/README.md) | Optional AI layer: `ai.act()`, `ai.byIntent()`, `toSatisfyAi` / `toViolateAi`, AI healing strategy, opt-in failure analysis reporter, record/replay cache. |
 | [`create-testfly`](./packages/create-testfly/README.md) | Project scaffolder: `npm create testfly@latest`. |
-| `@testfly/mobile` | **Experimental, private, not published.** Mobile helpers without a real device driver yet. Not part of the supported API. |
+| [`@testfly/mobile`](./packages/mobile/README.md) | **Experimental, private, not published.** Native iOS/Android testing on [Mobilewright](https://mobilewright.dev) (devices driven by mobilecli): `device`, `mobileScreen`, `mobileLocate` fixtures. Not part of the supported API. |
 
-Design decisions are recorded in [`docs/adr/ADR-001.md`](./docs/adr/ADR-001.md).
+Design decisions are recorded in [`docs/adr/`](./docs/adr/) ([ADR-001](./docs/adr/ADR-001.md), [ADR-002](./docs/adr/ADR-002.md)).
 
 ---
 
@@ -94,7 +94,7 @@ submit:
 error_banner: ".alert-error" # a plain string is a CSS selector
 ```
 
-Each definition uses exactly one selector field: `role` (with optional `name`, `exact`, `level`), `label`, `text`, `testid`, `placeholder`, `alt`, `title`, `css` or `xpath`. Modifiers: `nth`, `first`, `last`, `has_text`, `within` (key of a parent locator) and `fallbacks`. A `web:` key is accepted as an alias for the definition; `ios`/`android`/`mobile` keys are currently ignored.
+Each definition uses exactly one selector field: `role` (with optional `name`, `exact`, `level`), `label`, `text`, `testid`, `placeholder`, `alt`, `title`, `css` or `xpath`. Modifiers: `nth`, `first`, `last`, `has_text`, `within` (key of a parent locator) and `fallbacks`. A `web:` key is accepted as an alias for the definition. `ios:`, `android:` and `mobile:` blocks hold native definitions for [`@testfly/mobile`](./packages/mobile/README.md); the web `locate()` does not use them.
 
 Generate typed keys for IDE autocompletion (writes `locators/index.d.ts`). Any string is still accepted at compile time; an unknown key fails at runtime with `TF_LOCATOR_NOT_FOUND`:
 
@@ -303,7 +303,24 @@ The `testfly` binary ships with `@testfly/playwright`.
 
 ## Mobile
 
-`packages/mobile` contains **experimental** mobile helpers. It is private, not published, has no real device driver and is not covered by the supported API. Native iOS/Android automation is not available today.
+`@testfly/mobile` adds **experimental** native iOS/Android testing on [Mobilewright](https://mobilewright.dev), which drives simulators, emulators and real devices through mobilecli (no Appium). It is private, not published and not covered by the supported API. `mobilewright` is an optional peer dependency.
+
+```ts
+// playwright.config.ts → testfly
+mobile: { platform: 'ios', bundleId: 'com.example.app' },
+```
+
+```ts
+import { test, expect } from '@testfly/mobile';
+
+test('sign in', async ({ mobileLocate }) => {
+  await mobileLocate('login.username').fill('ada');   // the YAML ios:/android:/mobile: block
+  await mobileLocate('login.signIn').tap();
+  await expect(mobileLocate('home.greeting')).toHaveText('Hello, ada');
+});
+```
+
+BDD steps import from `@testfly/mobile/bdd` (set `testfly.bdd.importTestFrom: '@testfly/mobile/bdd'`). Details: [`packages/mobile/README.md`](./packages/mobile/README.md), [ADR-002](./docs/adr/ADR-002.md).
 
 ---
 
@@ -321,6 +338,7 @@ Requires Node.js >= 22 and pnpm 10.
 ## Documentation
 
 - [ADR-001: foundation decisions](./docs/adr/ADR-001.md)
+- [ADR-002: native mobile testing on Mobilewright](./docs/adr/ADR-002.md)
 - [Architecture (`ARCHITECTURE.md`, Turkish)](./ARCHITECTURE.md)
 - [MVP specification (`MVP_SPEC.md`, Turkish)](./MVP_SPEC.md)
 - [Roadmap (`ROADMAP.md`, Turkish)](./ROADMAP.md)

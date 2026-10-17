@@ -55,7 +55,44 @@ export interface LocatorDef {
   within?: string;
   /** Alternative definitions tried (as `locator.or(...)`) when the primary does not match. */
   fallbacks?: LocatorDef[];
+  /**
+   * Native mobile definitions from the `ios:` / `android:` / `mobile:` keys (used by `@testfly/mobile`).
+   * A key may be mobile-only (no web selector); the web `locate()` then rejects it.
+   */
+  platforms?: Partial<Record<MobileDefKey, MobileLocatorDef>>;
 }
+
+/** Mobile platforms of {@link LocatorDef.platforms}; `mobile` applies to both. @public */
+export type MobileDefKey = 'ios' | 'android' | 'mobile';
+
+/**
+ * A native mobile locator (Mobilewright `screen.getBy*`). Exactly one selector field; a plain string
+ * in YAML means `testid` (iOS accessibilityIdentifier / Android resource-id).
+ *
+ * @public
+ */
+export interface MobileLocatorDef {
+  /** Mobilewright role (`button`, `textfield`, `text`, `switch`, …) → `getByRole(role, { name })`. */
+  role?: string;
+  name?: string;
+  exact?: boolean;
+  label?: string;
+  text?: string;
+  testid?: string;
+  placeholder?: string;
+  /** Raw native class, e.g. `XCUIElementTypeDatePicker` or `android.widget.RadioGroup` → `getByType`. */
+  type?: string;
+  nth?: number;
+  first?: boolean;
+  last?: boolean;
+  has_text?: string;
+  /** Key of another locator whose mobile definition scopes this one. */
+  within?: string;
+  fallbacks?: MobileLocatorDef[];
+}
+
+/** Selector fields of a {@link MobileLocatorDef}. @public */
+export const MOBILE_SELECTOR_FIELDS = ['role', 'label', 'text', 'testid', 'placeholder', 'type'] as const;
 
 /** Names of the fields that select an element. @public */
 export const SELECTOR_FIELDS = ['role', 'label', 'text', 'testid', 'placeholder', 'alt', 'title', 'css', 'xpath'] as const;

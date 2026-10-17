@@ -49,3 +49,24 @@ describe('features kill-switch panel', () => {
     expect(modes).toEqual({ a: 'rules', b: 'off' });
   });
 });
+
+describe('mobile options', () => {
+  it('are optional and validated with defaults when present', () => {
+    expect(parseTestFlyOptions({}).mobile).toBeUndefined();
+    const o = parseTestFlyOptions({ mobile: { platform: 'ios', bundleId: 'com.example.app', deviceName: 'iPhone 16' } });
+    expect(o.mobile).toMatchObject({ platform: 'ios', bundleId: 'com.example.app', autoAppLaunch: true, autoStart: true, screenshotOnFailure: true, timeouts: {} });
+  });
+
+  it('reject an unknown platform', () => {
+    expect(() => parseTestFlyOptions({ mobile: { platform: 'windows' } })).toThrow(/mobile.platform/);
+  });
+
+  it('can differ per project (one project per platform)', () => {
+    const config = defineConfig({
+      testfly: { reporter: { enabled: false }, mobile: { platform: 'ios', bundleId: 'com.example.app' } },
+      projects: [{ name: 'ios' }, { name: 'android', use: { testfly: { mobile: { platform: 'android', bundleId: 'com.example.app' } } } }],
+    });
+    const platforms = Object.fromEntries((config.projects ?? []).map((p) => [p.name, (p.use as unknown as { testfly: Resolved }).testfly.mobile?.platform]));
+    expect(platforms).toEqual({ ios: 'ios', android: 'android' });
+  });
+});
