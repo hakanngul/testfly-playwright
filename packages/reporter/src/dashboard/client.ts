@@ -178,6 +178,14 @@ export const CLIENT_JS = String.raw`
       if (t.error.stack) d.appendChild(h('details', {}, [h('summary', { class: 'muted', text: 'Stack trace' }), h('pre', { text: t.error.stack })]));
     }
     if (t.analysis) { d.appendChild(h('h4', { text: 'AI analysis' })); d.appendChild(h('pre', { text: t.analysis })); }
+    if (t.console && t.console.length) {
+      d.appendChild(h('h4', { text: 'Console errors (' + t.console.length + ')' }));
+      var cl = h('ul', { class: 'tl' });
+      t.console.forEach(function (c) {
+        cl.appendChild(h('li', {}, [h('span', { class: 'dot l-fail' }), h('span', { class: 'muted', text: c.type + '  ' }), h('span', { text: c.message + (c.location ? '  (' + c.location + ')' : '') })]));
+      });
+      d.appendChild(cl);
+    }
     if (t.steps.length) {
       d.appendChild(h('h4', { text: 'Steps' }));
       var ul = h('ul', { class: 'tl' });

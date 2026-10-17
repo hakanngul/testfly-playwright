@@ -36,10 +36,16 @@ After a run open `.testfly/report/index.html`.
 | `qualityGate.failOnHeal` | `false` | Fail if any locator was healed. |
 | `dashboard` | `true` | Write `report/index.html`. |
 | `printSummary` | `true` | Print a console summary (honors `NO_COLOR`; no colors on `CI`). |
+| `notifications.slack` / `.teams` / `.discord` | - | Webhook URLs. A message with the run counts (and `notifications.reportUrl` or the CI build URL) is posted at the end of the run. |
+| `notifications.on` | `failure` | `failure` posts only when the run or the quality gate failed; `always` posts every run. A rejected webhook is a warning, never a failed run. |
 
 A violated gate prints the reasons and makes Playwright exit with status `failed`.
 
-Outputs: `history/run-<timestamp>-<shard>.v1.json`, `report/flakiness.json`, `report/summary.json`, `report/index.html`.
+Outputs: `history/run-<timestamp>-<shard>.v1.json`, `report/flakiness.json`, `report/summary.json`, `report/heal-log.json`, `report/index.html`.
+
+- `report/heal-log.json` lists every locator healed in the run (rules, fuzzy and AI strategies) with the test it happened in, so the locators can be fixed for good.
+- Browser errors collected by the `consoleErrors` fixture are stored per test and shown in the dashboard.
+- AI failure analysis from `@testfly/ai/reporter` (`report/ai-analysis.json`) is embedded in the run record and the dashboard, whichever of the two reporters finishes first.
 
 ## Flakiness Radar
 

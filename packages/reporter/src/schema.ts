@@ -23,6 +23,7 @@ export const CONTENT_TYPES = {
   api: 'application/vnd.testfly.api+json',
   ai: 'application/vnd.testfly.ai+json',
   meta: 'application/vnd.testfly.meta+json',
+  console: 'application/vnd.testfly.console+json',
 } as const;
 
 export type TestFlyContentType = (typeof CONTENT_TYPES)[keyof typeof CONTENT_TYPES];
@@ -72,6 +73,16 @@ export const ApiEventSchema = z.object({
   curl: z.string().optional(),
 });
 export type ApiEvent = z.infer<typeof ApiEventSchema>;
+
+/** A browser error captured by the `consoleErrors` fixture (uncaught exception or `console.error`). */
+export const ConsoleEventSchema = z.object({
+  type: z.enum(['pageerror', 'console']),
+  message: z.string(),
+  url: z.string().optional(),
+  location: z.string().optional(),
+  timestamp: z.number(),
+});
+export type ConsoleEvent = z.infer<typeof ConsoleEventSchema>;
 
 /** Usage of an AI feature (cache hit/miss, tokens) — used for cost reporting. */
 export const AiEventSchema = z.object({
@@ -124,6 +135,8 @@ export const TestRecordSchema = z.object({
   steps: z.array(StepEventSchema).default([]),
   api: z.array(ApiEventSchema).default([]),
   ai: z.array(AiEventSchema).default([]),
+  /** Browser errors of the last attempt (additive field). */
+  console: z.array(ConsoleEventSchema).default([]),
   /** Paths (relative to outputDir) of screenshots/videos/traces. */
   artifacts: z.array(z.object({ name: z.string(), path: z.string(), contentType: z.string() })).default([]),
   /** AI failure analysis (markdown) if enabled. */

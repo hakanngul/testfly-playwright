@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import type { FullConfig, FullResult, Reporter, Suite, TestCase, TestResult } from '@playwright/test/reporter';
 import type { AiOptions } from '@testfly/playwright';
+import { embedAnalysis } from '@testfly/reporter';
 import { CONTENT_TYPES } from '@testfly/reporter/schema';
 import type { StepEvent } from '@testfly/reporter/schema';
 import { redact } from './context/redact';
@@ -47,7 +48,7 @@ function parseJsonAttachment<T>(body: Buffer | undefined): T | undefined {
  *
  * Collects failed tests (final attempt only), asks the model for a root-cause analysis and writes
  * `<outputDir>/report/ai-analysis.json` (`{ [testId]: markdown }`). Never fails the run.
- * `@testfly/reporter` can embed it; until then the dashboard reads the JSON file.
+ * The analyses are embedded in the `@testfly/reporter` run record and dashboard, whichever reporter finishes first.
  *
  * @public
  */
@@ -146,5 +147,12 @@ export default class AiFailureAnalysisReporter implements Reporter {
     const file = join(dir, 'ai-analysis.json');
     writeFileSync(file, `${JSON.stringify(out, null, 2)}\n`);
     console.log(`[testfly-ai] analysed ${Object.keys(out).length}/${this.pending.length} failed test(s) → ${relative(this.rootDir, file)}`);
+    // If @testfly/reporter already finished (it runs after this reporter only when listed later),
+    // put the analyses into its run record and dashboard too.
+    try {
+      embedAnalysis(resolve(this.rootDir, this.options.outputDir ?? '.testfly'), out);
+    } catch (err) {
+      console.log(`[testfly-ai] could not embed the analysis in the dashboard: ${err instanceof Error ? err.message.split('\n')[0] : String(err)}`);
+    }
   }
 }

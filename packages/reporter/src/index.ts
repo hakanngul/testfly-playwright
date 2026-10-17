@@ -17,3 +17,6 @@ export { evaluateGate, type GateResult, type QualityGateOptions } from './gate';
 export { mergeRuns } from './merge';
 export { computeTotals, passRate } from './totals';
 export { generateDashboard, buildDashboardModel, type DashboardModel } from './dashboard';
+export { embedAnalysis, readAnalysisFile, AI_ANALYSIS_FILE } from './analysis';
+export { HEAL_LOG_FILE, type HealLogEntry } from './healLog';
+export { NotificationManager, notifyRun, type NotificationOptions, type NotificationPayload } from './notifications';

@@ -42,7 +42,12 @@ export default defineConfig({
     api: { retry: { attempts: 2 } },
     db: { client: 'postgres', connectionString: '${DATABASE_URL}' },
     mail: { provider: 'mailpit', url: 'http://localhost:8025' },
-    reporter: { qualityGate: { minPassRate: 95, maxFlaky: 3 } },
+    consoleErrors: { mode: 'report', ignore: ['ResizeObserver loop'] },
+    reporter: {
+      qualityGate: { minPassRate: 95, maxFlaky: 3 },
+      notifications: { slack: '${SLACK_WEBHOOK_URL}', on: 'failure' },
+    },
+    features: { ai: false }, // master on/off switches
     profiles: { ci: { healing: { mode: 'off' } } },
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
@@ -56,7 +61,8 @@ export default defineConfig({
 - deep-merges per-project `use: { testfly: {...} }`,
 - sets `use.baseURL` from `testfly.baseUrl`,
 - wires `playwright-bdd` when `testfly.bdd` is set,
-- appends `@testfly/reporter` unless `testfly.reporter.enabled` is `false`.
+- appends `@testfly/reporter` unless `testfly.reporter.enabled` is `false`,
+- applies the `features` panel: `healing`, `ai`, `quarantine`, `consoleErrors`, `reporter` and `notifications` are on by default; switching one off overrides its own options (for example `features.ai: false` forces `ai.mode: 'off'`). Projects can switch features per project through `use.testfly.features`.
 
 Tests read the resolved options from the worker fixture `testfly`.
 
@@ -69,7 +75,7 @@ Tests read the resolved options from the worker fixture `testfly`.
 | `step` | `step('title', body)`, `step.info/pass/warn/fail/attach`. |
 | `faker` | `FakerClient` (seed with `TESTFLY_FAKER_SEED`). |
 | `locate(key)` / `locators` | Typed YAML locators with fallbacks and healing. |
-| `api` | `ApiClient`: `get/post/put/patch/delete/head/fetch`, `graphql`, `pollUntil`, `withBearer/withBasic/withHeader(s)/withBaseUrl/withAuth`. Responses: `status`, `data`, `durationMs`, `json()`, `jsonPath()`, `expectStatus`, `expectOk`, `expectHeader`, `expectJson`, `expectSchema`, `expectDurationBelow`. |
+| `api` | `ApiClient`: `get/post/put/patch/delete/head/fetch`, `graphql`, `pollUntil`, `withBearer/withBasic/withHeader(s)/withBaseUrl/withAuth`. Responses: `status`, `data`, `durationMs`, `json()`, `jsonPath()`, `expectStatus`, `expectStatusRange`, `expectOk`, `expectHeader`, `expectJson`, `expectJsonEquals` (semantic, optional `ignoreArrayOrder`, names the first difference), `expectJsonArrayContains`, `expectSchema`, `expectDurationBelow`. |
 | `db` | `DbClient`: `query`, `one`, `scalar`, `exec`, `transaction`, `expectRow`, `expectNoRow`, `expectValue`, `waitFor`. Requires `testfly.db`. |
 | `redis` | `RedisClient`: `get`, `getJson`, `set`, `del`, `exists`, `keys`, `ttl`, `waitFor`, `flushAll({ confirm: true })`. Requires `testfly.redis`. |
 | `mail` | `MailClient`: `list`, `latest`, `waitForEmail`, `extractCode`, `extractLinks`, `clear`. Requires `testfly.mail`. |
@@ -79,6 +85,7 @@ Tests read the resolved options from the worker fixture `testfly`.
 | `form` | `fill({ Email: 'a@b.c', 'Accept terms': true }, root?)`: finds fields by label, placeholder, name, id or test id. |
 | `mock` | `get/post/put/delete/json/delay/abort`, `expectRequest`, `getHistory`, `reset`. |
 | `session` | `as(role)`, `define(role, setup)`, `path(role)`, `clear(role?)`. |
+| `consoleErrors` | Browser errors (uncaught exceptions and `console.error`) of every page in the test's context: `list()`, `clear()`, `expectNone()`. Collected automatically in tests that open a browser; `consoleErrors.mode: 'fail'` fails a passing test that logged errors (`TF_CONSOLE_ERRORS`), `'report'` (default) only attaches them to the dashboard. |
 
 `db`, `redis` and `mail` are worker-scoped and created lazily. Using them without config throws `TF_DB_NOT_CONFIGURED` / `TF_MAIL_NOT_CONFIGURED`. Tests listed in `testfly-quarantine.yml` are skipped automatically.
 
@@ -93,6 +100,29 @@ test('checkout', async ({ page, locate, api, step }) => {
   await step('Add to cart', () => locate('product.add_to_cart').click());
   await expect(locate('cart.badge')).toHaveText('1');
 });
+```
+
+## Extra matchers
+
+The `expect` exported by `@testfly/playwright` (and `/bdd`) adds web-first matchers Playwright does not ship. They retry until the expect timeout and support `.not`.
+
+| Matcher | Checks |
+| --- | --- |
+| `toBeValid()` / `toBeInvalid()` | HTML5 constraint validation (`checkValidity()`, or `aria-invalid` on custom widgets). |
+| `toHaveValidationMessage(text \| RegExp)` | The browser's validation message. |
+| `toBeRequired()` / `toBeReadOnly()` | `required` / `readonly` attribute, or `aria-required` / `aria-readonly`. |
+| `toHaveMaxLength(n)` | `maxlength` of the field. |
+| `toBePasswordHidden()` / `toBePasswordVisible()` | Whether a "show password" toggle switched the input away from `type="password"`. |
+| `toHaveSelectedOption(label \| RegExp)` | Label of the selected `<option>`. |
+| `toHaveCountAtLeast(n)` / `toHaveCountAtMost(n)` | Bounds on the number of matched elements. |
+| `toHaveCookie(name, value?)` | Cookie of the page's browser context. |
+| `toHaveLocalStorageItem(key, value?)` | `localStorage` entry of the page's origin. |
+| `toHaveWindowCount(n)` | Open pages (tabs and popups) in the page's context. |
+
+```ts
+await expect(page.getByLabel('Email')).toBeInvalid();
+await expect(page.getByLabel('Email')).toHaveValidationMessage(/@/);
+await expect(page).toHaveCookie('session', /^eyJ/);
 ```
 
 ## Locators

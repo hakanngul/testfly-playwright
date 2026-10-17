@@ -1,6 +1,7 @@
 import { isDeepStrictEqual } from 'node:util';
 import { TestFlyError } from '../../core/errors';
 import { queryJsonPath } from './jsonPath';
+import { firstJsonDifference, type JsonEqualityOptions } from './jsonDiff';
 import { truncate } from './curl';
 import type { SchemaLike } from './types';
 
@@ -112,6 +113,38 @@ export class ApiResponse<T = any> {
     if (!isDeepStrictEqual(actual, value)) {
       this.failWith(`Expected ${path} to equal ${safeStringify(value)} but got ${safeStringify(actual)}.`);
     }
+    return this;
+  }
+
+  /** Status code is within `from`..`to` (inclusive), e.g. `expectStatusRange(200, 299)`. */
+  expectStatusRange(from: number, to: number): this {
+    if (this.status < from || this.status > to) this.failWith(`Expected status in ${from}..${to} but got ${this.status}.`);
+    return this;
+  }
+
+  /**
+   * Semantic JSON equality of the whole body (or of `options.path`): object key order never matters,
+   * array order matters unless `ignoreArrayOrder` is set. The failure message names the first difference.
+   *
+   * @example
+   * ```ts
+   * res.expectJsonEquals({ id: 1, tags: ['b', 'a'] }, { ignoreArrayOrder: true });
+   * res.expectJsonEquals({ name: 'Ada' }, { path: '$.user' });
+   * ```
+   */
+  expectJsonEquals(expected: unknown, options: JsonEqualityOptions & { path?: string } = {}): this {
+    const actual = options.path ? this.jsonPath(options.path) : this.parsedOrThrow();
+    const diff = firstJsonDifference(actual, expected, options, options.path ?? '$');
+    if (diff) this.failWith(`JSON body differs from the expected value.\n  first difference: ${diff}`);
+    return this;
+  }
+
+  /** The array at `path` contains an element semantically equal to `value` (key order ignored). */
+  expectJsonArrayContains(path: string, value: unknown, options: JsonEqualityOptions = {}): this {
+    const actual = this.jsonPath<unknown>(path);
+    if (!Array.isArray(actual)) this.failWith(`Expected ${path} to be an array but got ${safeStringify(actual)}.`);
+    const found = (actual as unknown[]).some((item) => firstJsonDifference(item, value, options) === null);
+    if (!found) this.failWith(`Expected ${path} to contain ${safeStringify(value)}.`);
     return this;
   }
 

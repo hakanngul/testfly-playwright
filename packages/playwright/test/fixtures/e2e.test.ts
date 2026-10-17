@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { CONTENT_TYPES, ApiEventSchema, HealEventSchema, StepEventSchema } from '@testfly/reporter/schema';
+import { CONTENT_TYPES, ApiEventSchema, ConsoleEventSchema, HealEventSchema, StepEventSchema } from '@testfly/reporter/schema';
 import { cleanupTmp, makeTmp } from '../helpers/tmp';
 
 /**
@@ -69,6 +69,9 @@ beforeAll(() => {
       'locate.spec.ts',
       'quarantine.spec.ts',
       'unconfigured.spec.ts',
+      'assertions.spec.ts',
+      'console.spec.ts',
+      'console-fail.spec.ts',
       '--reporter=json',
     ],
     { cwd: pkgRoot, encoding: 'utf8', env: { ...process.env, PLAYWRIGHT_JSON_OUTPUT_NAME: out }, timeout: 180_000 },
@@ -154,6 +157,31 @@ describe('integration suite data contract', () => {
       const t = find(title);
       expect(t.project).toBe('unconfigured');
       expect(t.errors.join('\n'), title).toContain(`[${code}]`);
+    }
+  });
+
+  it('consoleErrors attaches browser errors with the console content type (report mode)', () => {
+    const t = find('collects uncaught exceptions and console.error without failing the test');
+    expect(t.status).toBe('passed');
+    const att = t.attachments.find((a) => a.name === 'testfly-console')!;
+    expect(att.contentType).toBe(CONTENT_TYPES.console);
+    const events = body(att) as unknown[];
+    expect(events).toHaveLength(2);
+    for (const e of events) expect(ConsoleEventSchema.safeParse(e).success).toBe(true);
+    expect(find('a clean page records nothing').attachments.some((a) => a.name === 'testfly-console')).toBe(false);
+  });
+
+  it('consoleErrors fail mode fails a passing test with TF_CONSOLE_ERRORS and honours ignore', () => {
+    const failed = find('fail mode fails a passing test that logged errors');
+    expect(failed.project).toBe('console-fail');
+    expect(failed.errors.join('\n')).toContain('[TF_CONSOLE_ERRORS]');
+    expect(find('ignored messages do not fail the test').status).toBe('passed');
+    expect(find('fail mode keeps a clean test green').status).toBe('passed');
+  });
+
+  it('extra expect matchers pass against a real browser', () => {
+    for (const title of ['validity, required, read-only and maxlength', 'cookie, localStorage and window count', 'count bounds wait for late elements']) {
+      expect(find(title).status, title).toBe('passed');
     }
   });
 });

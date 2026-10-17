@@ -22,11 +22,16 @@ export default defineConfig({
     timeouts: { poll: 2000, pollInterval: 50 },
   },
   projects: [
-    { name: 'main', testMatch: /(core|api|locate|quality|quarantine|session)\.spec\.ts$/ },
+    { name: 'main', testMatch: /(core|api|locate|quality|quarantine|session|assertions|console)\.spec\.ts$/ },
     {
       name: 'data',
       testMatch: /data\.spec\.ts$/,
       use: { testfly: { db: { client: 'mock' }, mail: { provider: 'mock' }, timeouts: { poll: 400, pollInterval: 50 } } },
+    },
+    {
+      name: 'console-fail',
+      testMatch: /console-fail\.spec\.ts$/,
+      use: { testfly: { consoleErrors: { mode: 'fail', ignore: ['^ignored'] } } },
     },
     // Every test in these specs is expected to FAIL (test.fail()); the vitest suite checks the error codes.
     { name: 'unconfigured', testMatch: /unconfigured\.spec\.ts$/ },

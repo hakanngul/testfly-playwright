@@ -87,8 +87,8 @@ function applyReporters(config: PlaywrightTestConfig<{}, TestFlyUseOptions>, opt
   }
   if (list.some((entry) => isTestFlyReporter(entry as ReporterDescription))) return list;
 
-  const { outputDir, quarantineFile, historySize, qualityGate } = options.reporter;
-  list.push([resolveReporter(), { outputDir, quarantineFile, historySize, qualityGate, env: options.env }]);
+  const { outputDir, quarantineFile, historySize, qualityGate, notifications } = options.reporter;
+  list.push([resolveReporter(), { outputDir, quarantineFile, historySize, qualityGate, notifications, env: options.env }]);
   return list;
 }
 

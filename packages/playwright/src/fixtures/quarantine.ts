@@ -21,6 +21,10 @@ export interface QuarantineCache {
 export const quarantineTest = coreTest.extend<{ _quarantineGuard: void }, { _quarantineCache: QuarantineCache | null }>({
   _quarantineCache: [
     async ({ testfly }, use, workerInfo) => {
+      if (!testfly.features.quarantine) {
+        await use(null);
+        return;
+      }
       const file = path.resolve(configBaseDir(workerInfo.config), testfly.reporter.quarantineFile);
       if (!fs.existsSync(file)) {
         await use(null);

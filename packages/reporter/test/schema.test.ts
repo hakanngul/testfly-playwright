@@ -100,8 +100,8 @@ describe('toAttachment', () => {
     expect(JSON.parse(att.body.toString('utf8'))[0].title).toBe('ünï 🚀');
   });
 
-  it('defines all five content types under the testfly vendor tree', () => {
-    expect(Object.keys(CONTENT_TYPES).sort()).toEqual(['ai', 'api', 'heal', 'meta', 'step']);
+  it('defines all six content types under the testfly vendor tree', () => {
+    expect(Object.keys(CONTENT_TYPES).sort()).toEqual(['ai', 'api', 'console', 'heal', 'meta', 'step']);
     for (const v of Object.values(CONTENT_TYPES)) expect(v).toMatch(/^application\/vnd\.testfly\.\w+\+json$/);
   });
 });

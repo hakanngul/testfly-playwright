@@ -33,12 +33,15 @@ Bu doküman TestFly'ın fazlarını ve kilometre taşlarını içerir. İşaretl
 > **Hedef:** Stabilite analitiği, CI entegrasyonu ve AI destekli yardımcılar.
 
 - [x] **Kural tabanlı hata sınıflandırma (triage):** `@testfly/reporter` başarısız testleri sıralı bir kural tablosuyla (`TRIAGE_RULES`, LLM yok, sıfır token) `SYSTEM_FLAKY`, `TEST_BUG`, `APPLICATION_BUG`, `NEEDS_INVESTIGATION` olarak sınıflandırıyor; dashboard'da gösteriliyor.
-- [~] **LLM destekli hata analizi:** opt-in `@testfly/ai/reporter` başarısız testler için LLM'den (Anthropic / OpenAI / Gemini / OpenAI uyumlu) kök neden analizi alıp `.testfly/report/ai-analysis.json` dosyasına yazıyor. *Planlanan: LLM tabanlı triage sınıflandırması ve analizin TestFly dashboard'una gömülmesi; trace/screenshot verisinin modele gönderilmesi şu an yok (yalnızca hata mesajı, kod parçası, adımlar ve URL).*
+- [~] **LLM destekli hata analizi:** opt-in `@testfly/ai/reporter` başarısız testler için LLM'den (Anthropic / OpenAI / Gemini / OpenAI uyumlu) kök neden analizi alıp `.testfly/report/ai-analysis.json` dosyasına yazıyor; analiz run kaydına ve TestFly dashboard'una gömülüyor. *Planlanan: LLM tabanlı triage sınıflandırması; trace/screenshot verisinin modele gönderilmesi şu an yok (yalnızca hata mesajı, kod parçası, adımlar ve URL).*
 - [x] **Self-healing locator:** YAML `fallbacks` → rules → fuzzy → (opsiyonel) AI stratejisi; heal olayları raporlanıyor, `qualityGate.failOnHeal` ile koşum düşürülebiliyor.
 - [x] **Flakiness Radar, karantina, kalite kapısı ve LPT sharding** (`@testfly/reporter`, `testfly shard`, `testfly quarantine list`).
 - [x] **CI şablonları:** `testfly ci github|gitlab` (GitHub için shard desteğiyle).
 - [x] **AI katmanı:** `ai.act()`, `ai.byIntent()`, `toSatisfyAi`/`toViolateAi`, live/replay/off cache modları (`@testfly/ai`).
-- [~] **Slack & Teams bildiricisi:** `NotificationManager` (`sendSlack`, `sendTeams`) kodu var, ancak henüz CLI'ya veya reporter'a bağlı değil.
+- [x] **Slack, Teams & Discord bildirimleri:** `@testfly/reporter` koşum sonunda `testfly.reporter.notifications` ile tanımlı webhook'lara mesaj gönderiyor (varsayılan: yalnızca başarısız koşumlarda).
+- [x] **TestFly (Java) paritesi, dalga 1:** ek `expect` matcher'ları (form doğrulama, şifre görünürlüğü, sayı sınırları, cookie/localStorage/pencere sayısı), `consoleErrors` fixture'ı, API anlamsal JSON yardımcıları, run başına `heal-log.json`, `features` aç/kapa paneli.
+- [ ] **TestFly (Java) paritesi, dalga 2:** API batch/interceptor/`saveTo`, JSON Schema & OpenAPI doğrulama, Excel test verisi ve suite context, sayfasız API mock sunucusu, otomatik patch (Auto-PR).
+- [ ] **Yük testi:** k6 sarmalayıcısı (TestFly'daki deklaratif yük testi karşılığı).
 - [ ] **TestRail & Xray senkronizasyonu.**
 
 ---

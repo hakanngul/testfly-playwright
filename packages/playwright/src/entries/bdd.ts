@@ -1,7 +1,7 @@
 import { createBdd, cucumberReporter, defineBddConfig, defineBddProject, defineParameterType, DataTable } from 'playwright-bdd';
 import { test as bddBase } from 'playwright-bdd';
-import { mergeTests, expect } from '@playwright/test';
-import { test as testflyTest } from '../fixtures';
+import { mergeTests } from '@playwright/test';
+import { test as testflyTest, expect } from '../fixtures';
 
 /**
  * `test` for BDD: playwright-bdd's base merged with every TestFly fixture.

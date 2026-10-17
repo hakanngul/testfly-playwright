@@ -51,6 +51,8 @@ export type TestFlyErrorCode =
   // quality fixtures
   | 'TF_QUALITY_ASSERTION_FAILED'
   | 'TF_QUALITY_UNSUPPORTED'
+  // browser console
+  | 'TF_CONSOLE_ERRORS'
   // reporter / quality gates
   | 'TF_QUARANTINE_INVALID'
   | 'TF_QUALITY_GATE_FAILED'

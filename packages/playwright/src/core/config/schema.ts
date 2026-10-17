@@ -108,6 +108,19 @@ export const AiOptionsSchema = z.object({
   redact: z.array(z.string()).default([]),
 });
 
+export const ConsoleErrorsOptionsSchema = z.object({
+  /**
+   * off    – do not listen
+   * report – attach the errors to the test (shown in the TestFly dashboard)
+   * fail   – also fail a test that otherwise passed when the page logged errors
+   */
+  mode: z.enum(['off', 'report', 'fail']).default('report'),
+  /** Regexes (strings) for errors to ignore, matched against the message. */
+  ignore: z.array(z.string()).default([]),
+  /** Also collect `console.error` calls, not only uncaught exceptions (`pageerror`). */
+  includeConsole: z.boolean().default(true),
+});
+
 export const LocatorsOptionsSchema = z.object({
   /** Directory with YAML locator catalogs. */
   dir: z.string().default('locators'),
@@ -133,6 +146,36 @@ export const ReporterOptionsSchema = z.object({
       failOnHeal: z.boolean().default(false),
     })
     .prefault({}),
+  /**
+   * Chat notifications at the end of the run. Webhook URLs usually come from env placeholders,
+   * e.g. `slack: '${SLACK_WEBHOOK_URL}'`. Nothing is sent when no URL is set.
+   */
+  notifications: z
+    .object({
+      slack: z.string().optional(),
+      teams: z.string().optional(),
+      discord: z.string().optional(),
+      /** `failure` (default): only failed runs / quality gates; `always`: every run. */
+      on: z.enum(['always', 'failure']).default('failure'),
+      title: z.string().optional(),
+      reportUrl: z.string().optional(),
+    })
+    .optional(),
+});
+
+/**
+ * Master on/off switches (ported from TestFly's `features:` panel). A disabled feature wins over its
+ * own options: `healing: false` forces `healing.mode = 'off'`, `ai: false` forces `ai.mode = 'off'`,
+ * `reporter: false` drops @testfly/reporter, `notifications: false` drops `reporter.notifications`,
+ * `consoleErrors: false` forces `consoleErrors.mode = 'off'` and `quarantine: false` runs quarantined tests.
+ */
+export const FeaturesSchema = z.object({
+  healing: z.boolean().default(true),
+  ai: z.boolean().default(true),
+  quarantine: z.boolean().default(true),
+  consoleErrors: z.boolean().default(true),
+  reporter: z.boolean().default(true),
+  notifications: z.boolean().default(true),
 });
 
 export const TestFlyOptionsSchema = z.object({
@@ -147,9 +190,11 @@ export const TestFlyOptionsSchema = z.object({
   session: SessionOptionsSchema.prefault({}),
   locators: LocatorsOptionsSchema.prefault({}),
   healing: HealingOptionsSchema.prefault({}),
+  consoleErrors: ConsoleErrorsOptionsSchema.prefault({}),
   ai: AiOptionsSchema.prefault({}),
   bdd: BddOptionsSchema.optional(),
   reporter: ReporterOptionsSchema.prefault({}),
+  features: FeaturesSchema.prefault({}),
   /**
    * Named overrides applied when `env` (or `TESTFLY_ENV`) matches the key, e.g.
    * `profiles: { ci: { ai: { mode: 'replay' } } }`. Deep-merged over the root options.
@@ -171,3 +216,5 @@ export type HealingOptions = z.infer<typeof HealingOptionsSchema>;
 export type AiOptions = z.infer<typeof AiOptionsSchema>;
 export type ReporterOptions = z.infer<typeof ReporterOptionsSchema>;
 export type SessionOptions = z.infer<typeof SessionOptionsSchema>;
+export type ConsoleErrorsOptions = z.infer<typeof ConsoleErrorsOptionsSchema>;
+export type FeatureFlags = z.infer<typeof FeaturesSchema>;

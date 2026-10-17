@@ -1,16 +1,20 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import type { FullConfig, FullResult, Reporter, Suite, TestCase, TestError, TestResult } from '@playwright/test/reporter';
+import { applyAnalyses, readAnalysisFile } from './analysis';
 import { detectCi } from './ci';
 import { generateDashboard } from './dashboard';
 import { computeFlakiness } from './flakiness';
 import { evaluateGate, type QualityGateOptions } from './gate';
+import { writeHealLog } from './healLog';
 import { pruneHistory, readHistory, writeRun } from './history';
+import { notifyRun, type NotificationOptions, type NotificationPayload } from './notifications';
 import { loadQuarantine, matchQuarantine, type QuarantineList } from './quarantine';
 import {
   ApiEventSchema,
   AiEventSchema,
   CONTENT_TYPES,
+  ConsoleEventSchema,
   HealEventSchema,
   MetaEventSchema,
   RunRecordSchema,
@@ -18,6 +22,7 @@ import {
   StepEventSchema,
   type AiEvent,
   type ApiEvent,
+  type ConsoleEvent,
   type HealEvent,
   type RunRecord,
   type StepEvent,
@@ -47,6 +52,8 @@ export interface TestFlyReporterOptions {
   dashboard?: boolean;
   /** Print a console summary. Default true. */
   printSummary?: boolean;
+  /** Slack / Teams / Discord messages at the end of the run (by default only when it failed). */
+  notifications?: NotificationOptions;
 }
 
 interface Accumulator {
@@ -122,11 +129,27 @@ export default class TestFlyReporter implements Reporter {
   }
 
   async onEnd(result: FullResult): Promise<{ status?: FullResult['status'] } | undefined> {
+    let ret: { status?: FullResult['status'] } | undefined;
     try {
-      return this.finish(result);
+      ret = this.finish(result);
     } catch (e) {
       console.warn(`[testfly] reporter failed: ${(e as Error).stack ?? (e as Error).message}`);
       return undefined;
+    }
+    await this.notify();
+    return ret;
+  }
+
+  private notification?: NotificationPayload;
+
+  private async notify(): Promise<void> {
+    const options = this.options.notifications;
+    if (!options || !this.notification) return;
+    try {
+      const { failed } = await notifyRun(options, this.notification);
+      if (failed.length) this.warn(`notification failed for: ${failed.join(', ')}`);
+    } catch (e) {
+      this.warn(`notifications skipped: ${(e as Error).message}`);
     }
   }
 
@@ -157,14 +180,15 @@ export default class TestFlyReporter implements Reporter {
 
   private parseAttachments(
     results: TestResult[],
-  ): { heals: HealEvent[]; ai: AiEvent[]; analysis?: string; perAttempt: Array<{ steps: StepEvent[]; api: ApiEvent[] }> } {
+  ): { heals: HealEvent[]; ai: AiEvent[]; analysis?: string; perAttempt: Array<{ steps: StepEvent[]; api: ApiEvent[]; console: ConsoleEvent[] }> } {
     const heals: HealEvent[] = [];
     const ai: AiEvent[] = [];
     let analysis: string | undefined;
-    const perAttempt: Array<{ steps: StepEvent[]; api: ApiEvent[] }> = [];
+    const perAttempt: Array<{ steps: StepEvent[]; api: ApiEvent[]; console: ConsoleEvent[] }> = [];
     for (const r of results) {
       const steps: StepEvent[] = [];
       const api: ApiEvent[] = [];
+      const consoleEvents: ConsoleEvent[] = [];
       for (const att of r?.attachments ?? []) {
         if (!TESTFLY_TYPES.has(att.contentType)) continue;
         let payload: unknown;
@@ -203,6 +227,11 @@ export default class TestFlyReporter implements Reporter {
               if (v) ai.push(v);
               break;
             }
+            case CONTENT_TYPES.console: {
+              const v = parse<ConsoleEvent>(ConsoleEventSchema);
+              if (v) consoleEvents.push(v);
+              break;
+            }
             case CONTENT_TYPES.meta: {
               const v = parse<{ analysis?: string }>(MetaEventSchema);
               if (v?.analysis) analysis = v.analysis;
@@ -211,7 +240,7 @@ export default class TestFlyReporter implements Reporter {
           }
         }
       }
-      perAttempt.push({ steps, api });
+      perAttempt.push({ steps, api, console: consoleEvents });
     }
     return { heals, ai, analysis, perAttempt };
   }
@@ -265,7 +294,7 @@ export default class TestFlyReporter implements Reporter {
 
     const parsed = this.parseAttachments(results);
     const heals = parsed.heals;
-    const lastAttempt = parsed.perAttempt[parsed.perAttempt.length - 1] ?? { steps: [], api: [] };
+    const lastAttempt = parsed.perAttempt[parsed.perAttempt.length - 1] ?? { steps: [], api: [], console: [] };
 
     // For flaky tests the interesting error is the last failed attempt.
     const failedResult = [...results].reverse().find((r) => r.status === 'failed' || r.status === 'timedOut');
@@ -301,6 +330,7 @@ export default class TestFlyReporter implements Reporter {
       steps: lastAttempt.steps,
       api: lastAttempt.api,
       ai: parsed.ai,
+      console: lastAttempt.console,
       artifacts: this.collectArtifacts(results),
       analysis: parsed.analysis,
     };
@@ -308,6 +338,8 @@ export default class TestFlyReporter implements Reporter {
 
   private finish(result: FullResult): { status?: FullResult['status'] } | undefined {
     const tests = [...this.tests.values()].map((a) => this.buildRecord(a));
+    // AI failure analysis written by @testfly/ai/reporter earlier in this run (reporters finish in order).
+    applyAnalyses(tests, readAnalysisFile(join(this.outputDir, 'report'), this.startedAt));
     const totals = computeTotals(tests);
     const shard = this.config?.shard ?? undefined;
     // Playwright fails the run for quarantined failures too; when they are the only failures
@@ -337,6 +369,7 @@ export default class TestFlyReporter implements Reporter {
     const flakiness = computeFlakiness(history);
     mkdirSync(reportDir, { recursive: true });
     writeFileSync(join(reportDir, 'flakiness.json'), JSON.stringify(flakiness, null, 2) + '\n');
+    writeHealLog(reportDir, record);
 
     let dashboardFile: string | undefined;
     if (this.options.dashboard) {
@@ -372,6 +405,17 @@ export default class TestFlyReporter implements Reporter {
         2,
       ) + '\n',
     );
+
+    const failedRun = !gate.passed || record.status !== 'passed';
+    this.notification = {
+      title: this.options.notifications?.title ?? (record.env ? `Playwright run (${record.env})` : 'Playwright run'),
+      status: failedRun ? 'failed' : 'passed',
+      totalTests: record.totals.total,
+      passedTests: record.totals.passed,
+      failedTests: record.totals.failed,
+      duration: `${Math.round(record.durationMs / 100) / 10}s`,
+      reportUrl: this.options.notifications?.reportUrl ?? record.ci?.buildUrl,
+    };
 
     if (this.options.printSummary) {
       printSummary({ record, gate, gateConfigured: this.options.qualityGate !== undefined, flakiness, dashboardFile, warnings: this.warnings });

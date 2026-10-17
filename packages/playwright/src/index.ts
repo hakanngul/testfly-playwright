@@ -17,6 +17,7 @@ export {
   mockTest,
   sessionTest,
   quarantineTest,
+  consoleTest,
 } from './fixtures';
 export type {
   TestFlyFixtures,
@@ -29,7 +30,13 @@ export type {
   QualityFixtures,
   MockFixtures,
   SessionFixtures,
+  ConsoleFixtures,
+  ConsoleErrorsApi,
 } from './fixtures';
+
+// Extra matchers (already registered on `expect`)
+export { testflyMatchers } from './assertions/matchers';
+export type { TestFlyMatchers, MatcherTimeout } from './assertions/matchers';
 
 // Sessions
 export { defineSession } from './clients/auth';
@@ -50,13 +57,15 @@ export type {
   HealingOptions,
   ReporterOptions,
   SessionOptions,
+  ConsoleErrorsOptions,
+  FeatureFlags,
 } from './core/config/schema';
 
 // Helpers handed to tests (types only)
 export { TestContext } from './core/context';
 export type { TypedContext, TestContextOptions } from './core/context';
 export type { StepApi, StepLevel } from './core/steps';
-export type { ApiClient } from './clients/api';
+export type { ApiClient, ApiResponse, JsonEqualityOptions } from './clients/api';
 export type { DbClient, RedisClient } from './clients/db';
 export type { MailClient } from './clients/mail';
 export type { MockClient } from './clients/mock';

@@ -56,5 +56,21 @@ export function parseTestFlyOptions(raw: unknown, overrides?: unknown, origin = 
     });
   }
   const { profiles: _profiles, ...options } = result.data;
-  return options;
+  return applyFeatureFlags(options);
+}
+
+/** A disabled `features.*` switch overrides the feature's own options. @internal */
+export function applyFeatureFlags(options: TestFlyOptions): TestFlyOptions {
+  const f = options.features;
+  return {
+    ...options,
+    healing: f.healing ? options.healing : { ...options.healing, mode: 'off' },
+    ai: f.ai ? options.ai : { ...options.ai, mode: 'off' },
+    consoleErrors: f.consoleErrors ? options.consoleErrors : { ...options.consoleErrors, mode: 'off' },
+    reporter: {
+      ...options.reporter,
+      enabled: f.reporter && options.reporter.enabled,
+      notifications: f.notifications ? options.reporter.notifications : undefined,
+    },
+  };
 }
