@@ -128,10 +128,12 @@ The model proposes a semantic target from the ARIA snapshot; it is accepted only
 ### Failure analysis (opt-in reporter)
 
 ```ts
-reporter: [['@testfly/ai/reporter', { provider: 'anthropic', maxAnalyses: 10, concurrency: 3 }]],
+reporter: [['@testfly/ai/reporter', { provider: 'anthropic', maxAnalyses: 10, concurrency: 3, patches: true, maxPatches: 3 }]],
 ```
 
-Analyses failed tests (final attempt) and writes `.testfly/report/ai-analysis.json` (`{ [testId]: markdown }`). It never fails the run and does nothing in `replay`/`off` (prints one line). `@testfly/reporter` will embed it later; until then the dashboard reads that file.
+Analyses failed tests (final attempt) and writes `.testfly/report/ai-analysis.json` (`{ [testId]: markdown }`). It never fails the run and does nothing in `replay`/`off` (prints one line). The analyses are embedded in the `@testfly/reporter` run record and dashboard.
+
+With `patches: true` (Auto-PR) it also asks for the smallest unified diff that fixes each analysed failure. A diff is kept only if it changes the failing spec file alone and `git apply --check` accepts it; it is written to `.testfly/remediations/<test>.patch` and never applied for you. Review it, then `git apply` it or open a PR from it.
 
 ### Custom providers
 

@@ -1,7 +1,10 @@
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import { TestFlyError } from '../../core/errors';
 import { queryJsonPath } from './jsonPath';
 import { firstJsonDifference, type JsonEqualityOptions } from './jsonDiff';
+import { validateJsonSchema, validateOpenApi, type JsonSchemaSource, type OpenApiMatchOptions, type OpenApiSource } from './jsonSchema';
 import { truncate } from './curl';
 import type { SchemaLike } from './types';
 
@@ -45,7 +48,7 @@ export class ApiResponse<T = any> {
     this.request = init.request;
     this.truncateAt = init.truncateAt;
     this.rawBody = init.body;
-    this.rawText = init.body.toString('utf8');
+    this.rawText = decode(init.body, this.charset);
     let data: unknown = this.rawText;
     if (this.rawText.length > 0) {
       try {
@@ -55,6 +58,25 @@ export class ApiResponse<T = any> {
       }
     }
     this.data = data as T;
+  }
+
+  /** Media type of the body without parameters, e.g. `application/json` (empty when not sent). */
+  get contentType(): string {
+    return (this.headers['content-type'] ?? '').split(';')[0]!.trim().toLowerCase();
+  }
+
+  /** Charset from `Content-Type` (default `utf-8`); the text body is decoded with it. */
+  get charset(): string {
+    const m = /charset\s*=\s*"?([^";\s]+)"?/i.exec(this.headers['content-type'] ?? '');
+    return (m?.[1] ?? 'utf-8').toLowerCase();
+  }
+
+  /** Write the raw body to `file` (directories are created) and return the absolute path. */
+  saveTo(file: string): string {
+    const target = resolve(file);
+    mkdirSync(dirname(target), { recursive: true });
+    writeFileSync(target, this.rawBody);
+    return target;
   }
 
   /** Body as text. */
@@ -160,6 +182,44 @@ export class ApiResponse<T = any> {
     return result.data as S;
   }
 
+  /**
+   * Validate the JSON body against a JSON Schema (object, or path to a `.json`/`.yaml` file).
+   * Needs the optional package `ajv` (`ajv-formats` is used for `format` when installed).
+   * Draft-07 by default; draft 2019-09/2020-12 when the schema declares it in `$schema`.
+   */
+  async expectJsonSchema(schema: JsonSchemaSource): Promise<this> {
+    const issues = await validateJsonSchema(this.parsedOrThrow(), schema);
+    if (issues.length) this.schemaMismatch('JSON Schema', issues);
+    return this;
+  }
+
+  /**
+   * Validate the JSON body against the response schema an OpenAPI 3.x document declares for this
+   * request (operation matched from method + URL path, response from the status code, `2XX` or `default`).
+   * `$ref`s to `components` are resolved. Needs the optional package `ajv`.
+   *
+   * @example
+   * ```ts
+   * await (await api.get('/users/7')).expectOpenApi('openapi.yaml');
+   * ```
+   */
+  async expectOpenApi(spec: OpenApiSource, options: OpenApiMatchOptions = {}): Promise<this> {
+    const { issues, operation } = await validateOpenApi(
+      this.parsedOrThrow(),
+      spec,
+      { method: this.request.method, url: this.request.url, status: this.status, contentType: this.contentType },
+      options,
+    );
+    if (issues.length) this.schemaMismatch(`OpenAPI ${operation}`, issues);
+    return this;
+  }
+
+  private schemaMismatch(against: string, issues: string[]): never {
+    throw new TestFlyError('TF_API_SCHEMA_MISMATCH', `Response does not match the ${against} schema.\n${issues.map((i) => `  - ${i}`).join('\n')}\n${this.describe()}`, {
+      details: { method: this.request.method, url: this.request.url, status: this.status, issues },
+    });
+  }
+
   expectDurationBelow(ms: number): this {
     if (this.durationMs >= ms) this.failWith(`Expected the request to take less than ${ms}ms but it took ${this.durationMs}ms.`);
     return this;
@@ -194,5 +254,15 @@ function safeStringify(v: unknown): string {
     return JSON.stringify(v) ?? String(v);
   } catch {
     return String(v);
+  }
+}
+
+/** Decode with the response charset; unknown charsets fall back to UTF-8. */
+function decode(body: Buffer, charset: string): string {
+  if (charset === 'utf-8' || charset === 'utf8') return body.toString('utf8');
+  try {
+    return new TextDecoder(charset).decode(body);
+  } catch {
+    return body.toString('utf8');
   }
 }

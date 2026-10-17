@@ -152,6 +152,17 @@ describe('notifications', () => {
     expect(await notifyRun({ slack: `${url}/slack`, on: 'always' }, payload)).toEqual({ sent: ['slack'], failed: [] });
   });
 
+  it('testManagement pushes tagged results to TestRail at the end of the run', async () => {
+    const r = new TestFlyReporter({ outputDir: tmp(), printSummary: false, testManagement: { testrail: { url, user: 'u', apiKey: 'k', runId: 12 } } });
+    r.onBegin(fakeConfig(), {} as never);
+    r.onTestEnd(fakeTest({ title: 'linked', outcome: 'expected', tags: ['@C501'] }), fakeResult());
+    r.onTestEnd(fakeTest({ title: 'unlinked', outcome: 'expected' }), fakeResult());
+    await r.onEnd(fullResult('passed'));
+    const post = posts.find((p) => p.path?.includes('add_results_for_cases/12'));
+    expect(post?.body.results).toEqual([expect.objectContaining({ case_id: 501, status_id: 1 })]);
+    expect(log.mock.calls.some((c) => String(c[0]).includes('testrail: sent 1 result(s) → R12'))).toBe(true);
+  });
+
   it('a rejected webhook is reported as a warning, never as a failed run', async () => {
     const out = tmp();
     await run(out, { notifications: { discord: `${url}/broken` } });

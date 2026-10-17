@@ -8,6 +8,7 @@ import type { StepEvent } from '@testfly/reporter/schema';
 import { redact } from './context/redact';
 import { resolveAiOptions } from './options';
 import { analysisSystemPrompt, analysisUserPrompt } from './prompts';
+import { checkPatch, extractDiff, readSource, relPosix, remediationSystemPrompt, remediationUserPrompt, writePatch } from './remediation';
 import { AiRuntime } from './runtime';
 
 /** Options of the `@testfly/ai/reporter` reporter: all AI options plus a few of its own. @public */
@@ -18,6 +19,14 @@ export interface AiReporterOptions extends Partial<AiOptions> {
   concurrency?: number;
   /** Output directory (analysis goes to `<outputDir>/report/ai-analysis.json`). Default `.testfly`. */
   outputDir?: string;
+  /**
+   * Auto-PR: also ask for a minimal unified diff that fixes each analysed failure. A diff is kept only
+   * when it changes the failing spec file alone and `git apply --check` accepts it; it is written to
+   * `<outputDir>/remediations/<test>.patch` and NEVER applied automatically. Default false.
+   */
+  patches?: boolean;
+  /** Max patches generated per run. Default 3. */
+  maxPatches?: number;
 }
 
 interface Pending {
@@ -27,6 +36,8 @@ interface Pending {
   snippet?: string;
   steps: string[];
   url?: string;
+  /** Absolute path of the spec file. */
+  file: string;
 }
 
 // eslint-disable-next-line no-control-regex
@@ -97,6 +108,7 @@ export default class AiFailureAnalysisReporter implements Reporter {
       snippet: err.snippet ? strip(err.snippet).slice(0, 2_000) : undefined,
       steps,
       url,
+      file: test.location.file,
     });
   }
 
@@ -141,6 +153,8 @@ export default class AiFailureAnalysisReporter implements Reporter {
     };
     await Promise.all(Array.from({ length: Math.min(concurrency, queue.length) }, worker));
 
+    if (this.options.patches) await this.remediate(runtime, queue, out, options);
+
     if (!Object.keys(out).length) return;
     const dir = resolve(this.rootDir, this.options.outputDir ?? '.testfly', 'report');
     mkdirSync(dir, { recursive: true });
@@ -153,6 +167,47 @@ export default class AiFailureAnalysisReporter implements Reporter {
       embedAnalysis(resolve(this.rootDir, this.options.outputDir ?? '.testfly'), out);
     } catch (err) {
       console.log(`[testfly-ai] could not embed the analysis in the dashboard: ${err instanceof Error ? err.message.split('\n')[0] : String(err)}`);
+    }
+  }
+
+  private async remediate(runtime: AiRuntime, queue: Pending[], analyses: Record<string, string>, options: ReturnType<typeof resolveAiOptions>): Promise<void> {
+    const outDir = resolve(this.rootDir, this.options.outputDir ?? '.testfly', 'remediations');
+    const max = Math.max(0, this.options.maxPatches ?? 3);
+    let written = 0;
+    for (const item of queue) {
+      if (written >= max) break;
+      const relFile = relPosix(this.rootDir, item.file);
+      const source = readSource(item.file, Math.min(options.maxContextChars, 40_000));
+      if (!source || relFile.startsWith('..')) continue;
+      try {
+        const res = await runtime.complete({
+          system: remediationSystemPrompt(),
+          messages: [
+            {
+              role: 'user',
+              content: redact(remediationUserPrompt({ title: item.title, error: item.error, snippet: item.snippet, analysis: analyses[item.id], file: relFile, source }), options.redact),
+            },
+          ],
+          maxTokens: Math.max(options.maxTokens, 2_000),
+          temperature: 0,
+        });
+        const diff = extractDiff(res.text);
+        if (!diff) {
+          console.log(`[testfly-ai] no patch proposed for "${item.title}".`);
+          continue;
+        }
+        const check = checkPatch(diff, this.rootDir, relFile);
+        if (!check.ok) {
+          console.log(`[testfly-ai] patch for "${item.title}" discarded: ${check.reason}`);
+          continue;
+        }
+        const header = `# TestFly AI remediation for: ${item.title}\n# Review before applying: git apply <this file>`;
+        const file = writePatch(outDir, item.title, diff, header);
+        written++;
+        console.log(`[testfly-ai] patch proposed → ${relative(this.rootDir, file)}`);
+      } catch (err) {
+        console.log(`[testfly-ai] patch generation failed for "${item.title}": ${err instanceof Error ? err.message.split('\n')[0] : String(err)}`);
+      }
     }
   }
 }

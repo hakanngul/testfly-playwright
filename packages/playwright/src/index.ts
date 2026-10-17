@@ -63,12 +63,12 @@ export type {
 
 // Helpers handed to tests (types only)
 export { TestContext } from './core/context';
-export type { TypedContext, TestContextOptions } from './core/context';
+export type { TypedContext, TestContextOptions, ExcelLoadOptions } from './core/context';
 export type { StepApi, StepLevel } from './core/steps';
-export type { ApiClient, ApiResponse, JsonEqualityOptions } from './clients/api';
+export type { ApiClient, ApiResponse, JsonEqualityOptions, ApiInterceptor, ApiBatchTask, ApiBatchResult, ApiBatchOptions, JsonSchemaSource, OpenApiSource, OpenApiMatchOptions } from './clients/api';
 export type { DbClient, RedisClient } from './clients/db';
 export type { MailClient } from './clients/mail';
-export type { MockClient } from './clients/mock';
+export type { MockClient, MockServer, MockServerRequest, MockServerResponse, MockServerReply, MockStubOptions, MockRequestMatch } from './clients/mock';
 export type { FakerClient } from './clients/faker';
 export type { LocatorRegistry, TypedLocatorKey, LocateFn, HealingStrategy, HealContext, HealResult } from './locators';
 export { registerHealingStrategy } from './locators';

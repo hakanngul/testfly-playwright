@@ -1,0 +1,40 @@
+openapi: 3.0.3
+info: { title: Users, version: '1' }
+servers:
+  - url: https://api.example.com/v1
+paths:
+  /users/me:
+    get:
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+  /users/{id}:
+    get:
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        4XX:
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+components:
+  schemas:
+    User:
+      type: object
+      required: [id, name, role]
+      additionalProperties: false
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        role: { type: string, enum: [admin, user] }
+        nickname: { type: string, nullable: true }
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }

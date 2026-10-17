@@ -161,6 +161,39 @@ export const ReporterOptionsSchema = z.object({
       reportUrl: z.string().optional(),
     })
     .optional(),
+  /**
+   * Push results of tagged tests to TestRail (`@C1234`) and/or Xray Cloud (`@PROJ-123`) at the end of
+   * the run. Keep credentials in env placeholders (`'${TESTRAIL_API_KEY}'`).
+   */
+  testManagement: z
+    .object({
+      testrail: z
+        .object({
+          url: z.string(),
+          user: z.string(),
+          apiKey: z.string(),
+          runId: z.number().int().positive().optional(),
+          projectId: z.number().int().positive().optional(),
+          suiteId: z.number().int().positive().optional(),
+          runName: z.string().optional(),
+          closeRun: z.boolean().default(false),
+        })
+        .refine((t) => t.runId !== undefined || t.projectId !== undefined, { message: 'testrail needs runId or projectId' })
+        .optional(),
+      xray: z
+        .object({
+          clientId: z.string(),
+          clientSecret: z.string(),
+          projectKey: z.string().optional(),
+          testExecutionKey: z.string().optional(),
+          testPlanKey: z.string().optional(),
+          summary: z.string().optional(),
+          baseUrl: z.string().optional(),
+        })
+        .refine((x) => x.projectKey !== undefined || x.testExecutionKey !== undefined, { message: 'xray needs projectKey or testExecutionKey' })
+        .optional(),
+    })
+    .optional(),
 });
 
 /**

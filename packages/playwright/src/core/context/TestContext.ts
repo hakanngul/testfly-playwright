@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { TestFlyError } from '../errors';
+import { importOptional, TestFlyError } from '../errors';
 
 /** Options for {@link TestContext}. @public */
 export interface TestContextOptions {
@@ -11,6 +11,14 @@ export interface TestContextOptions {
    * keyed by file name. Default: `data`, `test-data`, `fixtures/data`.
    */
   dataDirs?: string[];
+}
+
+/** Options of {@link TestContext.loadExcel}. @public */
+export interface ExcelLoadOptions {
+  /** Worksheet name, or its 0-based position. Default: the first worksheet. */
+  sheet?: string | number;
+  /** Key the rows are stored under. Default: the file name without extension. */
+  namespace?: string;
 }
 
 /** Strongly typed view of a {@link TestContext}. @public */
@@ -151,6 +159,52 @@ export class TestContext {
       return record as T;
     });
     this.store.set(namespace ?? path.basename(full, path.extname(full)), records);
+    return records;
+  }
+
+  /**
+   * Load an `.xlsx` worksheet as an array of records (first row = header, empty rows skipped, cell
+   * values as displayed text, like {@link loadCsv}). Needs the optional package `exceljs`.
+   *
+   * @example
+   * ```ts
+   * const users = await ctx.loadExcel('data/users.xlsx', { sheet: 'valid' });
+   * for (const u of users) await login(u.email, u.password);
+   * ```
+   */
+  async loadExcel<T extends Record<string, string> = Record<string, string>>(file: string, options: ExcelLoadOptions = {}): Promise<T[]> {
+    const full = this.resolveFile(file);
+    const ExcelJS = await importOptional<any>('exceljs', 'Excel test data (ctx.loadExcel)');
+    const Workbook = ExcelJS.Workbook ?? ExcelJS.default?.Workbook;
+    const workbook = new Workbook();
+    try {
+      await workbook.xlsx.readFile(full);
+    } catch (cause) {
+      throw new TestFlyError('TF_DATA_FILE_INVALID', `Cannot read Excel file ${full}.`, { cause });
+    }
+    const sheets: any[] = workbook.worksheets;
+    const sheet = typeof options.sheet === 'string' ? workbook.getWorksheet(options.sheet) : sheets[options.sheet ?? 0];
+    if (!sheet) {
+      throw new TestFlyError('TF_DATA_FILE_INVALID', `Worksheet ${JSON.stringify(options.sheet ?? 0)} not found in ${full}.`, {
+        hint: `Available worksheets: ${sheets.map((s) => s.name).join(', ') || 'none'}.`,
+      });
+    }
+    const header: string[] = [];
+    sheet.getRow(1).eachCell({ includeEmpty: true }, (cell: any, col: number) => {
+      header[col - 1] = String(cell.text ?? '').trim();
+    });
+    const records: T[] = [];
+    for (let r = 2; r <= sheet.rowCount; r++) {
+      const row = sheet.getRow(r);
+      const values = header.map((_, i) => String(row.getCell(i + 1).text ?? ''));
+      if (values.every((v) => v.trim() === '')) continue;
+      const record: Record<string, string> = {};
+      header.forEach((name, i) => {
+        if (name) record[name] = values[i] ?? '';
+      });
+      records.push(record as T);
+    }
+    this.store.set(options.namespace ?? path.basename(full, path.extname(full)), records);
     return records;
   }
 

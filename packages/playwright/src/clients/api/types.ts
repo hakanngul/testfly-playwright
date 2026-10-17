@@ -49,3 +49,30 @@ export interface PollOptions {
 
 /** Anything with a zod-like `safeParse`. @public */
 export type SchemaLike<T> = Pick<ZodType<T>, 'safeParse'>;
+
+/**
+ * Hook into every request of a client (e.g. correlation ids, request signing, response logging).
+ * `onRequest` runs after auth, right before the request is sent, and may change `method`, `url`,
+ * `headers` and `body` in place. `onResponse` sees every response, including retried ones.
+ *
+ * @public
+ */
+export interface ApiInterceptor {
+  name?: string;
+  onRequest?(request: import('./auth').PreparedRequest): void | Promise<void>;
+  onResponse?(response: import('./response').ApiResponse, request: import('./auth').PreparedRequest): void | Promise<void>;
+}
+
+/** One entry of {@link ApiClient.batch}: a request built from the client. @public */
+export type ApiBatchTask<T = any> = (client: import('./ApiClient').ApiClient) => Promise<import('./response').ApiResponse<T>>;
+
+/** Outcome of one batch entry; failures never reject the whole batch. @public */
+export type ApiBatchResult<T = any> =
+  | { index: number; ok: true; response: import('./response').ApiResponse<T>; error?: undefined }
+  | { index: number; ok: false; response?: undefined; error: Error };
+
+/** Options of {@link ApiClient.batch}. @public */
+export interface ApiBatchOptions {
+  /** Requests in flight at the same time (default 5). */
+  concurrency?: number;
+}

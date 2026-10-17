@@ -20,3 +20,4 @@ export { generateDashboard, buildDashboardModel, type DashboardModel } from './d
 export { embedAnalysis, readAnalysisFile, AI_ANALYSIS_FILE } from './analysis';
 export { HEAL_LOG_FILE, type HealLogEntry } from './healLog';
 export { NotificationManager, notifyRun, type NotificationOptions, type NotificationPayload } from './notifications';
+export { syncTestRail, syncXray, syncTestManagement, type TestManagementOptions, type TestRailOptions, type XrayOptions, type SyncResult } from './testManagement';

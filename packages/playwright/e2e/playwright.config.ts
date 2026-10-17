@@ -22,7 +22,7 @@ export default defineConfig({
     timeouts: { poll: 2000, pollInterval: 50 },
   },
   projects: [
-    { name: 'main', testMatch: /(core|api|locate|quality|quarantine|session|assertions|console)\.spec\.ts$/ },
+    { name: 'main', testMatch: /(core|api|locate|quality|quarantine|session|assertions|console|mock-server|suite-context)\.spec\.ts$/ },
     {
       name: 'data',
       testMatch: /data\.spec\.ts$/,

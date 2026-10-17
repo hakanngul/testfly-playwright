@@ -128,7 +128,9 @@
     "imapflow": "^1.0.0 || ^2.0.0",
     "ioredis": "^5.0.0 || ^6.0.0",
     "mysql2": "^3.0.0",
-    "pg": "^8.0.0"
+    "pg": "^8.0.0",
+    "ajv": "^8.0.0",
+    "exceljs": "^4.0.0"
   },
   "peerDependenciesMeta": {
     "pg": {
@@ -142,12 +144,20 @@
     },
     "imapflow": {
       "optional": true
+    },
+    "ajv": {
+      "optional": true
+    },
+    "exceljs": {
+      "optional": true
     }
   },
   "devDependencies": {
     "@playwright/test": "^1.64.0",
     "@types/node": "^22.10.0",
     "@types/pg": "^8.11.0",
+    "ajv": "^8.20.0",
+    "exceljs": "^4.4.0",
     "imapflow": "^2.4.0",
     "ioredis": "^6.0.0",
     "mysql2": "^3.24.6",

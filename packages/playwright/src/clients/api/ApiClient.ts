@@ -6,7 +6,7 @@ import { ApiResponse } from './response';
 import { basicAuth, bearerAuth } from './auth';
 import type { AuthStrategy, PreparedRequest } from './auth';
 import { buildCurl, truncate } from './curl';
-import type { ApiFetchOptions, ApiRequestOptions, GraphqlOptions, PollOptions, RetryPolicy } from './types';
+import type { ApiBatchOptions, ApiBatchResult, ApiBatchTask, ApiFetchOptions, ApiInterceptor, ApiRequestOptions, GraphqlOptions, PollOptions, RetryPolicy } from './types';
 
 /** Constructor options for {@link ApiClient}. @public */
 export type ApiClientOptions = ApiOptions & { baseUrl?: string };
@@ -23,6 +23,7 @@ interface ClientConfig {
   baseUrl?: string;
   headers: Record<string, string>;
   auth?: AuthStrategy;
+  interceptors?: readonly ApiInterceptor[];
 }
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
@@ -87,6 +88,11 @@ export class ApiClient {
   /** New client using an auth strategy (see `bearerAuth`, `oauth2ClientCredentials`, `hmacSigner`, `digestAuth`, …). */
   withAuth(strategy: AuthStrategy): ApiClient {
     return this.derive({ auth: strategy });
+  }
+
+  /** New client that runs `interceptor` on every request/response (after the existing ones). */
+  withInterceptor(interceptor: ApiInterceptor): ApiClient {
+    return this.derive({ interceptors: [...(this.config.interceptors ?? []), interceptor] });
   }
 
   // ---- HTTP verbs ----
@@ -157,6 +163,36 @@ export class ApiClient {
       cause: lastError,
       details: { attempts, timeout, lastStatus: last?.status },
     });
+  }
+
+  /**
+   * Run several requests with bounded concurrency and collect every outcome, in input order.
+   * A failing entry (network error, `failOnStatus`, a throwing assertion inside the task) is reported
+   * as `{ ok: false, error }` and never cancels the others.
+   *
+   * @example
+   * ```ts
+   * const results = await api.batch(ids.map((id) => (c) => c.get(`/users/${id}`)), { concurrency: 3 });
+   * expect(results.filter((r) => !r.ok)).toEqual([]);
+   * ```
+   */
+  async batch<T = any>(tasks: ReadonlyArray<ApiBatchTask<T>>, opts: ApiBatchOptions = {}): Promise<Array<ApiBatchResult<T>>> {
+    const concurrency = Math.max(1, Math.floor(opts.concurrency ?? 5));
+    const results: Array<ApiBatchResult<T>> = new Array(tasks.length);
+    let next = 0;
+    const worker = async (): Promise<void> => {
+      for (;;) {
+        const index = next++;
+        if (index >= tasks.length) return;
+        try {
+          results[index] = { index, ok: true, response: await tasks[index]!(this) };
+        } catch (err) {
+          results[index] = { index, ok: false, error: err instanceof Error ? err : new Error(String(err)) };
+        }
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(concurrency, tasks.length) }, worker));
+    return results;
   }
 
   /** Attach all collected API events to the test (once). Called by the fixture teardown. */
@@ -270,6 +306,8 @@ export class ApiClient {
 
   private async execute<T>(prepared: PreparedRequest, opts: ApiRequestOptions, attempt: number): Promise<ApiResponse<T>> {
     const { request, options } = this.shared;
+    const interceptors = this.config.interceptors ?? [];
+    for (const i of interceptors) await i.onRequest?.(prepared);
     const fullUrl = prepared.url.toString();
     const start = Date.now();
     let raw: APIResponse;
@@ -298,6 +336,7 @@ export class ApiClient {
       truncateAt: options.truncateAt,
     });
     this.record(prepared, res.status, durationMs, attempt, res.text(), opts);
+    for (const i of interceptors) await i.onResponse?.(res, prepared);
     return res;
   }
 

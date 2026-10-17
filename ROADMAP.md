@@ -40,9 +40,9 @@ Bu doküman TestFly'ın fazlarını ve kilometre taşlarını içerir. İşaretl
 - [x] **AI katmanı:** `ai.act()`, `ai.byIntent()`, `toSatisfyAi`/`toViolateAi`, live/replay/off cache modları (`@testfly/ai`).
 - [x] **Slack, Teams & Discord bildirimleri:** `@testfly/reporter` koşum sonunda `testfly.reporter.notifications` ile tanımlı webhook'lara mesaj gönderiyor (varsayılan: yalnızca başarısız koşumlarda).
 - [x] **TestFly (Java) paritesi, dalga 1:** ek `expect` matcher'ları (form doğrulama, şifre görünürlüğü, sayı sınırları, cookie/localStorage/pencere sayısı), `consoleErrors` fixture'ı, API anlamsal JSON yardımcıları, run başına `heal-log.json`, `features` aç/kapa paneli.
-- [ ] **TestFly (Java) paritesi, dalga 2:** API batch/interceptor/`saveTo`, JSON Schema & OpenAPI doğrulama, Excel test verisi ve suite context, sayfasız API mock sunucusu, otomatik patch (Auto-PR).
+- [x] **TestFly (Java) paritesi, dalga 2:** `api.batch` / `withInterceptor` / `saveTo` + charset, `expectJsonSchema` / `expectOpenApi` (opsiyonel `ajv`), `ctx.loadExcel` (opsiyonel `exceljs`) ve worker kapsamlı `suiteCtx`, sayfasız `mockServer` fixture'ı, TestRail + Xray Cloud senkronu, `@testfly/ai/reporter` `patches` (Auto-PR).
 - [ ] **Yük testi:** k6 sarmalayıcısı (TestFly'daki deklaratif yük testi karşılığı).
-- [ ] **TestRail & Xray senkronizasyonu.**
+- [x] **TestRail & Xray senkronizasyonu:** `testfly.reporter.testManagement` (TestRail `@C1234`, Xray Cloud `@PROJ-123` etiketleriyle).
 
 ---
 

@@ -19,6 +19,11 @@ export interface CoreFixtures {
 export interface CoreWorkerFixtures {
   /** Resolved TestFly options (set through `defineConfig({ testfly })` or `test.use({ testfly })`). */
   testfly: TestFlyOptions;
+  /**
+   * Store shared by the tests of one worker (TestFly's SuiteContext). Playwright workers are separate
+   * processes, so values do not cross workers; share run-wide state through setup projects instead.
+   */
+  suiteCtx: TestContext;
 }
 
 const defaultOptions: TestFlyOptions = TestFlyOptionsSchema.parse({});
@@ -29,6 +34,13 @@ const defaultOptions: TestFlyOptions = TestFlyOptionsSchema.parse({});
  */
 export const coreTest = base.extend<CoreFixtures, CoreWorkerFixtures>({
   testfly: [defaultOptions, { option: true, scope: 'worker' }],
+
+  suiteCtx: [
+    async ({}, use, workerInfo) => {
+      await use(new TestContext({ baseDir: configBaseDir(workerInfo.config) }));
+    },
+    { scope: 'worker' },
+  ],
 
   ctx: async ({}, use, testInfo) => {
     await use(new TestContext({ baseDir: configBaseDir(testInfo.config) }));

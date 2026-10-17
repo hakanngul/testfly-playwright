@@ -9,6 +9,7 @@ import { evaluateGate, type QualityGateOptions } from './gate';
 import { writeHealLog } from './healLog';
 import { pruneHistory, readHistory, writeRun } from './history';
 import { notifyRun, type NotificationOptions, type NotificationPayload } from './notifications';
+import { syncTestManagement, type TestManagementOptions } from './testManagement';
 import { loadQuarantine, matchQuarantine, type QuarantineList } from './quarantine';
 import {
   ApiEventSchema,
@@ -54,6 +55,8 @@ export interface TestFlyReporterOptions {
   printSummary?: boolean;
   /** Slack / Teams / Discord messages at the end of the run (by default only when it failed). */
   notifications?: NotificationOptions;
+  /** Push results of tagged tests (`@C1234` → TestRail, `@PROJ-123` → Xray Cloud) at the end of the run. */
+  testManagement?: TestManagementOptions;
 }
 
 interface Accumulator {
@@ -137,7 +140,24 @@ export default class TestFlyReporter implements Reporter {
       return undefined;
     }
     await this.notify();
+    await this.syncTestManagement();
     return ret;
+  }
+
+  private lastRecord?: RunRecord;
+
+  private async syncTestManagement(): Promise<void> {
+    const options = this.options.testManagement;
+    if (!options || !this.lastRecord || (!options.testrail && !options.xray)) return;
+    try {
+      const { results, errors } = await syncTestManagement(this.lastRecord, options);
+      for (const r of results) {
+        if (r.sent > 0) console.log(`[testfly] ${r.target}: sent ${r.sent} result(s)${r.reference ? ` → ${r.reference}` : ''}`);
+      }
+      for (const e of errors) this.warn(`test management sync failed: ${e}`);
+    } catch (e) {
+      this.warn(`test management sync skipped: ${(e as Error).message}`);
+    }
   }
 
   private notification?: NotificationPayload;
@@ -406,6 +426,7 @@ export default class TestFlyReporter implements Reporter {
       ) + '\n',
     );
 
+    this.lastRecord = record;
     const failedRun = !gate.passed || record.status !== 'passed';
     this.notification = {
       title: this.options.notifications?.title ?? (record.env ? `Playwright run (${record.env})` : 'Playwright run'),

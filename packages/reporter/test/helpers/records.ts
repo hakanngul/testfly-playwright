@@ -21,6 +21,7 @@ export function makeTest(over: Partial<TestRecord> = {}): TestRecord {
     steps: [],
     api: [],
     ai: [],
+    console: [],
     artifacts: [],
     ...over,
   };

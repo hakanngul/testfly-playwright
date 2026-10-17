@@ -71,11 +71,12 @@ Tests read the resolved options from the worker fixture `testfly`.
 | Fixture | Description |
 | --- | --- |
 | `testfly` | Resolved options (worker scope). |
-| `ctx` | `TestContext`: `set/get/require/has`, dot paths, `interpolate('{{key}}')`, `load/loadJson/loadCsv`. |
+| `ctx` | `TestContext`: `set/get/require/has`, dot paths, `interpolate('{{key}}')`, `load/loadJson/loadCsv`, `loadExcel(file, { sheet })` (needs the optional `exceljs`). |
+| `suiteCtx` | A `TestContext` shared by the tests of one worker (worker scope). Playwright workers are separate processes, so it does not cross workers; share run-wide state with setup projects. |
 | `step` | `step('title', body)`, `step.info/pass/warn/fail/attach`. |
 | `faker` | `FakerClient` (seed with `TESTFLY_FAKER_SEED`). |
 | `locate(key)` / `locators` | Typed YAML locators with fallbacks and healing. |
-| `api` | `ApiClient`: `get/post/put/patch/delete/head/fetch`, `graphql`, `pollUntil`, `withBearer/withBasic/withHeader(s)/withBaseUrl/withAuth`. Responses: `status`, `data`, `durationMs`, `json()`, `jsonPath()`, `expectStatus`, `expectStatusRange`, `expectOk`, `expectHeader`, `expectJson`, `expectJsonEquals` (semantic, optional `ignoreArrayOrder`, names the first difference), `expectJsonArrayContains`, `expectSchema`, `expectDurationBelow`. |
+| `api` | `ApiClient`: `get/post/put/patch/delete/head/fetch`, `graphql`, `pollUntil`, `withBearer/withBasic/withHeader(s)/withBaseUrl/withAuth`. Responses: `status`, `data`, `durationMs`, `json()`, `jsonPath()`, `expectStatus`, `expectStatusRange`, `expectOk`, `expectHeader`, `expectJson`, `expectJsonEquals` (semantic, optional `ignoreArrayOrder`, names the first difference), `expectJsonArrayContains`, `expectSchema` (zod), `expectJsonSchema` and `expectOpenApi(spec)` (need the optional `ajv`), `expectDurationBelow`, `contentType`, `charset`, `saveTo(file)`. Client extras: `batch(tasks, { concurrency })` (partial results, never rejects) and `withInterceptor({ onRequest, onResponse })`. |
 | `db` | `DbClient`: `query`, `one`, `scalar`, `exec`, `transaction`, `expectRow`, `expectNoRow`, `expectValue`, `waitFor`. Requires `testfly.db`. |
 | `redis` | `RedisClient`: `get`, `getJson`, `set`, `del`, `exists`, `keys`, `ttl`, `waitFor`, `flushAll({ confirm: true })`. Requires `testfly.redis`. |
 | `mail` | `MailClient`: `list`, `latest`, `waitForEmail`, `extractCode`, `extractLinks`, `clear`. Requires `testfly.mail`. |
@@ -84,6 +85,7 @@ Tests read the resolved options from the worker fixture `testfly`.
 | `perf` | `getVitals()`, `assertLcp(ms)`, `assertCls(score)`, `assertTtfb(ms)`. |
 | `form` | `fill({ Email: 'a@b.c', 'Accept terms': true }, root?)`: finds fields by label, placeholder, name, id or test id. |
 | `mock` | `get/post/put/delete/json/delay/abort`, `expectRequest`, `getHistory`, `reset`. |
+| `mockServer` | Real HTTP stub server for tests without a page: `url`, `get/post/put/patch/delete(path, reply, { times })` (exact path, `*` glob or RegExp; reply object or function), `history()`, `expectRequest(method, path, { times, body })`, `waitForRequest`, `expectNoUnmatched`. One per worker, reset after each test. |
 | `session` | `as(role)`, `define(role, setup)`, `path(role)`, `clear(role?)`. |
 | `consoleErrors` | Browser errors (uncaught exceptions and `console.error`) of every page in the test's context: `list()`, `clear()`, `expectNone()`. Collected automatically in tests that open a browser; `consoleErrors.mode: 'fail'` fails a passing test that logged errors (`TF_CONSOLE_ERRORS`), `'report'` (default) only attaches them to the dashboard. |
 
@@ -101,6 +103,19 @@ test('checkout', async ({ page, locate, api, step }) => {
   await expect(locate('cart.badge')).toHaveText('1');
 });
 ```
+
+## API contracts
+
+```ts
+test('user contract', async ({ api, mockServer }) => {
+  mockServer.get('/users/*', { json: { id: 7, name: 'Ada', role: 'admin' } });
+  const res = await api.withBaseUrl(mockServer.url).get('/users/7');
+  await res.expectOpenApi('openapi.yaml'); // operation from method + path, response from status / 2XX / default
+  mockServer.expectRequest('GET', '/users/7', { times: 1 });
+});
+```
+
+`expectJsonSchema` uses draft-07 unless the schema declares 2019-09/2020-12 in `$schema`; OpenAPI 3.1 documents use 2020-12. Install `ajv` (and optionally `ajv-formats` for `format`). Violations throw `TF_API_SCHEMA_MISMATCH` and list every failing JSON path.
 
 ## Extra matchers
 

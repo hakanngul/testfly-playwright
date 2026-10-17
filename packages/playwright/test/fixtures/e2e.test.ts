@@ -72,6 +72,8 @@ beforeAll(() => {
       'assertions.spec.ts',
       'console.spec.ts',
       'console-fail.spec.ts',
+      'mock-server.spec.ts',
+      'suite-context.spec.ts',
       '--reporter=json',
     ],
     { cwd: pkgRoot, encoding: 'utf8', env: { ...process.env, PLAYWRIGHT_JSON_OUTPUT_NAME: out }, timeout: 180_000 },
@@ -181,6 +183,17 @@ describe('integration suite data contract', () => {
 
   it('extra expect matchers pass against a real browser', () => {
     for (const title of ['validity, required, read-only and maxlength', 'cookie, localStorage and window count', 'count bounds wait for late elements']) {
+      expect(find(title).status, title).toBe('passed');
+    }
+  });
+
+  it('mockServer, api.batch/interceptors and suiteCtx work without a page', () => {
+    for (const title of [
+      'stubs a service and verifies the calls the client made',
+      'each test starts with a clean server (no stubs, no history)',
+      'batch + interceptor against the mock server',
+      'second test in the same worker reads it; ctx is fresh',
+    ]) {
       expect(find(title).status, title).toBe('passed');
     }
   });
