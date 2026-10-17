@@ -37,12 +37,14 @@
   ],
   "scripts": {
     "build": "tsup",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
+    "pretest": "pnpm --filter \"create-testfly...\" build",
     "test": "vitest run",
     "lint:package": "publint"
   },
   "dependencies": {},
   "devDependencies": {
+    "@testfly/playwright": "workspace:*",
     "@types/node": "^22.10.0",
     "tsup": "^8.5.1",
     "typescript": "~5.9.3",

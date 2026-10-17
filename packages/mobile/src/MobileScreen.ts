@@ -1,11 +1,12 @@
+import { MobileDriver, requireDriverMethod } from './driver';
 import { MobileLocator, MobileLocatorOptions, MobileRole } from './MobileLocator';
 
 export interface MobileScreenOptions {
-  driver?: any;
+  driver?: MobileDriver;
 }
 
 export class MobileScreen {
-  constructor(private driver?: any) {}
+  constructor(private driver?: MobileDriver) {}
 
   /**
    * Locate element by visible text content
@@ -56,36 +57,31 @@ export class MobileScreen {
    * Swipe across the full screen
    */
   async swipe(direction: 'up' | 'down' | 'left' | 'right', options: { distance?: number } = {}): Promise<void> {
-    if (this.driver && typeof this.driver.swipe === 'function') {
-      await this.driver.swipe(direction, options);
-    }
+    await requireDriverMethod(this.driver, 'swipe', 'screen.swipe')(direction, options);
   }
 
   /**
    * Press hardware / system button
    */
   async pressButton(button: 'HOME' | 'BACK' | 'VOLUME_UP' | 'VOLUME_DOWN'): Promise<void> {
-    if (this.driver && typeof this.driver.pressButton === 'function') {
-      await this.driver.pressButton(button);
-    }
+    await requireDriverMethod(this.driver, 'pressButton', 'screen.pressButton')(button);
   }
 
   /**
    * Dismiss the on-screen soft keyboard
    */
   async hideKeyboard(): Promise<void> {
-    if (this.driver && typeof this.driver.hideKeyboard === 'function') {
-      await this.driver.hideKeyboard();
-    }
+    await requireDriverMethod(this.driver, 'hideKeyboard', 'screen.hideKeyboard')();
   }
 
   /**
    * Take screenshot of current mobile screen
    */
-  async takeScreenshot(name?: string): Promise<Buffer | null> {
-    if (this.driver && typeof this.driver.takeScreenshot === 'function') {
-      return await this.driver.takeScreenshot(name);
-    }
-    return null;
+  async takeScreenshot(name?: string): Promise<Buffer> {
+    return await requireDriverMethod<(name?: string) => Promise<Buffer>>(
+      this.driver,
+      'takeScreenshot',
+      'screen.takeScreenshot'
+    )(name);
   }
 }

@@ -4,7 +4,7 @@ import path from 'node:path';
 import { chromium, type Browser, type Page, type TestInfo } from '@playwright/test';
 
 export function launchChromium(): Promise<Browser> {
-  return chromium.launch({ executablePath: process.env.PW_CHROMIUM_PATH ?? '/opt/pw-browsers/chromium' });
+  return chromium.launch({ executablePath: process.env.PW_CHROMIUM_PATH || undefined });
 }
 
 export interface FakeTestInfo {

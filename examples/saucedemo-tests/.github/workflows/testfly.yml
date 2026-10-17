@@ -26,10 +26,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Install Playwright Browsers with dependencies
         run: npx playwright install --with-deps chromium
@@ -42,16 +41,14 @@ jobs:
             npx testfly test
           fi
 
-      - name: Generate Allure Static Report
-        if: always()
-        run: npx testfly report --allure --generate
-
       - name: Upload Test Reports Artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: testfly-reports
-          path: reports/
+          path: |
+            reports/
+            .testfly/report/
           retention-days: 14
 
       - name: Upload Playwright Trace & Artifacts

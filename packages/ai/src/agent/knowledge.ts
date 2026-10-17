@@ -1,9 +1,9 @@
-import type { JsonFileCache } from '../cache/json-file-cache';
+import { stableStringify, type JsonFileCache } from '../cache/json-file-cache';
 import type { KnownElement, PageKnowledgeEntry } from '../cache/stores';
 import type { ActionName, ActionStep, TargetSpec } from './plan';
 import { describeTarget, targetLabel } from './plan';
 
-const STOPWORDS = new Set(['the', 'a', 'an', 'on', 'in', 'into', 'to', 'of', 'for', 'with', 'at', 'as', 'button', 'field', 'link', 'box', 'textbox', 'and', 'then', 'please', 'icon', 'menu']);
+const STOPWORDS = new Set(['the', 'a', 'an', 'on', 'into', 'to', 'of', 'for', 'with', 'at', 'as', 'button', 'field', 'link', 'box', 'textbox', 'and', 'then', 'please', 'icon', 'menu']);
 
 const VERBS: [RegExp, ActionName][] = [
   [/\b(uncheck|untick|deselect)\b/, 'uncheck'],
@@ -17,9 +17,16 @@ const VERBS: [RegExp, ActionName][] = [
 const VERB_WORDS = new Set(['uncheck', 'untick', 'deselect', 'check', 'tick', 'clear', 'empty', 'hover', 'mouse', 'over', 'type', 'enter', 'fill', 'input', 'write', 'set', 'select', 'choose', 'pick', 'click', 'press', 'tap', 'open', 'submit', 'push', 'go', 'follow']);
 const VALUE_RE = /"([^"]*)"|'([^']*)'|`([^`]*)`|(\{\{\s*[\w.-]+\s*\}\})/;
 
-/** Lower-case content words of a phrase. @internal */
+/** Words that form a UI label together with a following "in" ("Sign In", "Log in", "Zoom in"). */
+const IN_LABEL_HEADS = new Set(['sign', 'log', 'login', 'logged', 'signed', 'check', 'opt', 'zoom', 'plug', 'clock', 'drop', 'walk']);
+
+/**
+ * Lower-case content words of a phrase. "in" is a stopword ("type x in the email field")
+ * unless it completes a UI label ("Sign In", "Log in"). @internal
+ */
 export function tokens(text: string): string[] {
-  return (text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []).filter((t) => !STOPWORDS.has(t));
+  const words = text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
+  return words.filter((t, i) => (t === 'in' ? i > 0 && IN_LABEL_HEADS.has(words[i - 1]) : !STOPWORDS.has(t)));
 }
 
 /** Detect action type + optional value from a single-clause goal. @internal */
@@ -106,7 +113,7 @@ export class PageKnowledge {
       if (!step.target || !learnable.includes(step.action)) return;
       const prev = plan[i - 1];
       const parent =
-        prev?.target && (prev.action === 'hover' || prev.action === 'click') && step.action !== 'hover' && JSON.stringify(prev.target) !== JSON.stringify(step.target)
+        prev?.target && (prev.action === 'hover' || prev.action === 'click') && step.action !== 'hover' && stableStringify(prev.target) !== stableStringify(step.target)
           ? { target: prev.target as TargetSpec, action: prev.action as 'hover' | 'click' }
           : undefined;
       // A trigger is only a parent when it was a hover (clicking a button then another button is just a sequence).
@@ -119,7 +126,7 @@ export class PageKnowledge {
     await this.store.update(pattern, (cur) => {
       const elements = [...(cur?.elements ?? [])];
       for (const el of found) {
-        const idx = elements.findIndex((e) => e.actionType === el.actionType && JSON.stringify(e.target) === JSON.stringify(el.target));
+        const idx = elements.findIndex((e) => e.actionType === el.actionType && stableStringify(e.target) === stableStringify(el.target));
         if (idx === -1) elements.push(el);
         else {
           const old = elements[idx];

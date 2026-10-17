@@ -92,8 +92,20 @@ test('checkout', async ({ page, ai }) => {
 
 ### BDD
 
+`Given/When/Then` live in `@testfly/playwright/bdd` and are bound to its BDD `test`, which has no `ai` fixture. Merge it with the `test` from `@testfly/ai` and create your own step functions:
+
 ```ts
-import { Given, When, Then } from '@testfly/playwright';
+// steps/fixtures.ts
+import { createBdd, mergeTests, test as bddTest } from '@testfly/playwright/bdd';
+import { test as aiTest } from '@testfly/ai';
+
+export const test = mergeTests(bddTest, aiTest);
+export const { Given, When, Then } = createBdd(test);
+```
+
+```ts
+// steps/ai.steps.ts
+import { When, Then } from './fixtures';
 
 When('I {string}', async ({ ai }, goal: string) => {
   await ai.act(goal);
@@ -102,8 +114,6 @@ Then('the page shows {string}', async ({ ai }, what: string) => {
   await ai.assert(what);
 });
 ```
-
-(Use the `test` exported by `@testfly/ai` as the base of your BDD fixtures so `ai` is available.)
 
 ### AI healing
 

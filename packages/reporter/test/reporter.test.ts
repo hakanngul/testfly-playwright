@@ -405,6 +405,108 @@ describe('TestFlyReporter end-to-end with fake Playwright objects', () => {
     });
   });
 
+  describe('quarantineFile', () => {
+    // fakeTest files live under ROOT (/proj); entries match by path suffix, as with the fixture.
+    const withQuarantine = (yaml: string | undefined, file = 'testfly-quarantine.yml') => {
+      const cfgDir = tmp();
+      if (yaml !== undefined) writeFileSync(join(cfgDir, file), yaml);
+      return { ...fakeConfig(), configFile: join(cfgDir, 'playwright.config.ts') } as unknown as ReturnType<typeof fakeConfig>;
+    };
+    const failing = (title: string, extra: Partial<Parameters<typeof fakeTest>[0]> = {}) =>
+      [fakeTest({ title, outcome: 'unexpected', ...extra }), fakeResult({ status: 'failed', error: { message: 'boom' } })] as const;
+
+    it('marks tests matched by the quarantine file as quarantined (test, tag and file entries)', async () => {
+      const out = tmp();
+      const config = withQuarantine(`quarantine:
+  - test: "tests/a.spec.ts › Cart › checkout"
+    reason: JIRA-1
+  - "@flaky-payment"
+  - tests/c.spec.ts
+`);
+      await runSuite(out, (r) => {
+        r.onTestEnd(...failing('checkout', { describes: ['Cart'] }));
+        r.onTestEnd(...failing('pay', { tags: ['@flaky-payment'] }));
+        r.onTestEnd(...failing('whole file', { file: `${ROOT}/tests/c.spec.ts` }));
+        r.onTestEnd(...failing('real failure'));
+      }, {}, config, fullResult('failed'));
+      const run = latestRun(out);
+      expect(byTitle(run, 'checkout')).toMatchObject({ quarantined: true, quarantineReason: 'JIRA-1', status: 'failed' });
+      expect(byTitle(run, 'pay')).toMatchObject({ quarantined: true });
+      expect(byTitle(run, 'pay').quarantineReason).toBeUndefined();
+      expect(byTitle(run, 'whole file')).toMatchObject({ quarantined: true });
+      expect(byTitle(run, 'real failure')).toMatchObject({ quarantined: false });
+      expect(run.totals).toMatchObject({ failed: 1, quarantined: 3 });
+      expect(run.status).toBe('failed');
+    });
+
+    it('a run whose only failures are quarantined is recorded and returned as passed, and passes the gate', async () => {
+      const out = tmp();
+      const config = withQuarantine('quarantine:\n  - "tests/a.spec.ts › broken"\n');
+      const { ret } = await runSuite(out, (r) => {
+        r.onTestEnd(fakeTest({ title: 'ok', outcome: 'expected' }), fakeResult());
+        r.onTestEnd(...failing('broken'));
+      }, { qualityGate: { minPassRate: 100 } }, config, fullResult('failed'));
+      expect(ret).toEqual({ status: 'passed' });
+      expect(latestRun(out).status).toBe('passed');
+      const summary = JSON.parse(readFileSync(join(out, 'report', 'summary.json'), 'utf8'));
+      expect(summary).toMatchObject({ status: 'passed', gate: { passed: true }, totals: { passed: 1, failed: 0, quarantined: 1 } });
+    });
+
+    it('does not override the run status when a global error occurred', async () => {
+      const out = tmp();
+      const config = withQuarantine('quarantine:\n  - "tests/a.spec.ts › broken"\n');
+      const { ret } = await runSuite(out, (r) => {
+        r.onError({ message: 'globalSetup failed' });
+        r.onTestEnd(...failing('broken'));
+      }, {}, config, fullResult('failed'));
+      expect(ret).toBeUndefined();
+      expect(latestRun(out).status).toBe('failed');
+    });
+
+    it('the quarantine annotation takes precedence over the file entry', async () => {
+      const out = tmp();
+      const config = withQuarantine('quarantine:\n  - test: "tests/a.spec.ts › q"\n    reason: from-file\n');
+      await runSuite(out, (r) => {
+        r.onTestEnd(fakeTest({ title: 'q', outcome: 'skipped' }), fakeResult({ status: 'skipped', annotations: [{ type: 'quarantine', description: 'from-fixture' }] }));
+      }, {}, config);
+      expect(byTitle(latestRun(out), 'q')).toMatchObject({ quarantined: true, quarantineReason: 'from-fixture' });
+    });
+
+    it('honours a custom quarantineFile name; expired entries are ignored', async () => {
+      const out = tmp();
+      const config = withQuarantine(`quarantine:
+  - test: "tests/a.spec.ts › old"
+    until: 2000-01-01
+  - "tests/a.spec.ts › new"
+`, 'q.yml');
+      await runSuite(out, (r) => {
+        r.onTestEnd(...failing('old'));
+        r.onTestEnd(...failing('new'));
+      }, { quarantineFile: 'q.yml' }, config, fullResult('failed'));
+      const run = latestRun(out);
+      expect(byTitle(run, 'old').quarantined).toBe(false);
+      expect(byTitle(run, 'new').quarantined).toBe(true);
+      expect(warn.mock.calls.flat().join('\n')).toContain('expired quarantine');
+    });
+
+    it('a missing quarantine file means no quarantine and no warning', async () => {
+      const out = tmp();
+      await runSuite(out, (r) => r.onTestEnd(...failing('x')), {}, withQuarantine(undefined), fullResult('failed'));
+      expect(byTitle(latestRun(out), 'x').quarantined).toBe(false);
+      expect(warn).not.toHaveBeenCalled();
+    });
+
+    it('an invalid quarantine file is warned about and ignored, never thrown', async () => {
+      const out = tmp();
+      const { ret } = await runSuite(out, (r) => r.onTestEnd(...failing('x')), {}, withQuarantine('quarantine: 42\n'), fullResult('failed'));
+      expect(ret).toBeUndefined();
+      expect(byTitle(latestRun(out), 'x').quarantined).toBe(false);
+      expect(warn.mock.calls.flat().join('\n')).toContain('TF_QUARANTINE_INVALID');
+      const summary = JSON.parse(readFileSync(join(out, 'report', 'summary.json'), 'utf8'));
+      expect(summary.warnings).toBe(1);
+    });
+  });
+
   it('uses relative file path from config.rootDir and project from the suite', async () => {
     const out = tmp();
     await runSuite(out, (r) => r.onTestEnd(fakeTest({ title: 'x', project: 'webkit', file: `${ROOT}/e2e/deep/b.spec.ts`, outcome: 'expected' }), fakeResult()));

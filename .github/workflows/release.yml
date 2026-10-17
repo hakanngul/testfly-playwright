@@ -1,0 +1,70 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write # push the "Version Packages" branch and tags
+  pull-requests: write # open/update the "Version Packages" PR
+  id-token: write # npm provenance (OIDC)
+
+jobs:
+  release:
+    name: Version or publish
+    # Publish only from main of the canonical repository (never from forks or other branches).
+    if: github.ref == 'refs/heads/main' && github.repository == 'hakanngul/testfly-playwright'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # `pnpm release` runs build + typecheck + test before `changeset publish`;
+      # browsers are needed for the test gate.
+      - name: Install Playwright Chromium
+        run: pnpm --filter @testfly/playwright exec playwright install --with-deps chromium
+
+      # Test helpers fall back to a sandbox path when PW_CHROMIUM_PATH is unset,
+      # so point it at the Chromium that Playwright just installed (its default).
+      - name: Export Playwright Chromium path
+        run: |
+          path="$(pnpm --filter @testfly/playwright exec node -e "process.stdout.write(require('@playwright/test').chromium.executablePath())")"
+          echo "PW_CHROMIUM_PATH=$path" >> "$GITHUB_ENV"
+
+      # With pending changesets: opens/updates the "Version Packages" PR.
+      # Without pending changesets (i.e. after that PR is merged): publishes to npm.
+      # The repo is in changesets pre mode (.changeset/pre.json, tag "next"),
+      # so versions are X.Y.Z-next.N and are published under the "next" dist-tag.
+      - name: Create release PR or publish to npm
+        uses: changesets/action@v1
+        with:
+          version: pnpm version-packages
+          publish: pnpm release
+          title: "chore(release): version packages"
+          commit: "chore(release): version packages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: "true"

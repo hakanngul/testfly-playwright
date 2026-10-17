@@ -2,7 +2,7 @@ import { defineConfig } from '../src/entries/config';
 
 // Integration suite for the TestFly fixtures. Imports the package SOURCE directly (Playwright's TS loader
 // compiles it on the fly); the same code is what ships in dist/.
-const executablePath = process.env.PW_CHROMIUM_PATH ?? '/opt/pw-browsers/chromium';
+const executablePath = process.env.PW_CHROMIUM_PATH || undefined;
 
 export default defineConfig({
   testDir: '.',
@@ -12,6 +12,9 @@ export default defineConfig({
   workers: 2,
   retries: 0,
   reporter: [['list']],
+  // The visual baselines are flat colour boxes (no text/fonts), so they render identically on every OS:
+  // drop the default `{-snapshotSuffix}` (platform) so one baseline set serves linux, macOS and Windows.
+  snapshotPathTemplate: '{snapshotDir}/{testFileDir}/{testFileName}-snapshots/{arg}{-projectName}{ext}',
   use: { launchOptions: { executablePath } },
   testfly: {
     reporter: { enabled: false },

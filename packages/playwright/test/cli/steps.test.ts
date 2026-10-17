@@ -71,6 +71,18 @@ describe('StepScanner', () => {
   it('escapes quotes when generating snippets', () => {
     const snippet = StepScanner.generateStepSnippet({ keyword: 'Given', text: "it's a day", fullText: "Given it's a day", file: 'f', line: 1 });
     expect(snippet).toContain("Given('it\\'s a day'");
+    expect(snippet).toContain("throw new Error('Step not implemented: it\\'s a day');");
+  });
+
+  it('generates stubs that fail loudly until implemented', async () => {
+    const snippet = StepScanner.generateStepSnippet({ keyword: 'When', text: 'waits 5 seconds', fullText: 'When waits 5 seconds', file: 'f', line: 1 });
+    expect(snippet).toContain("throw new Error('Step not implemented: waits 5 seconds');");
+    // Evaluate the generated body: it must reject, never pass silently.
+    const body = snippet.slice(snippet.indexOf('async ('), snippet.lastIndexOf(')'));
+    const impl = new Function(`return (${body.replace(/: number/g, '')});`)() as (fixtures: unknown, count1: number) => Promise<void>;
+    const infos: string[] = [];
+    await expect(impl({ page: {}, step: { info: async (m: string) => void infos.push(m) } }, 5)).rejects.toThrow('Step not implemented: waits 5 seconds');
+    expect(infos).toEqual(['waits 5 seconds']);
   });
 });
 

@@ -27,7 +27,7 @@ After a run open `.testfly/report/index.html`.
 | Option | Default | Description |
 | --- | --- | --- |
 | `outputDir` | `.testfly` | Holds `history/` and `report/` (relative to the current working directory). |
-| `quarantineFile` | `testfly-quarantine.yml` | Quarantine list (applied by the test fixture; see below). |
+| `quarantineFile` | `testfly-quarantine.yml` | Quarantine list, relative to the Playwright config dir. The fixture skips matching tests; the reporter also marks them quarantined, so without the fixture their failures neither count as failed nor fail the run/gate (see below). |
 | `historySize` | `20` | Run files kept; also the window of the Flakiness Radar. |
 | `env` | `$TESTFLY_ENV` | Environment label stored with the run. |
 | `qualityGate.minPassRate` | - | Minimum pass rate in percent (0-100) over executed tests. |
@@ -48,6 +48,8 @@ Per test over the last N runs, a run counts as unstable when the test failed or 
 ## Smart triage
 
 `triageFailure()` classifies failures with an ordered rule table (`TRIAGE_RULES` in `src/triage.ts`, first match wins): `SYSTEM_FLAKY` (timeouts, `net::ERR`, `ECONNRESET`, closed browser, 5xx, passed on retry), `TEST_BUG` (locator not found, strict mode violation, TypeError/ReferenceError, `TF_LOCATOR`), `APPLICATION_BUG` (assertion mismatch), otherwise `NEEDS_INVESTIGATION` (also heal-related failures).
+
+Triage is purely rule-based: no LLM, zero tokens. LLM root-cause analysis is a separate opt-in reporter in `@testfly/ai` (`@testfly/ai/reporter`, writes `<outputDir>/report/ai-analysis.json`). The dashboard does not embed that file yet.
 
 ## Quarantine file
 

@@ -80,7 +80,10 @@ test('attaches testfly payloads', async ({}, testInfo) => {
 
 afterAll(() => { if (proj) rmSync(proj, { recursive: true, force: true }); });
 
-describe('real Playwright run with the built reporter (file paths are relative to config.rootDir = testDir)', () => {
+// Each case spawns Playwright (spawnSync timeout 90s); the per-test timeout must exceed it.
+const SPAWN_TEST_TIMEOUT = 120_000;
+
+describe('real Playwright run with the built reporter (file paths are relative to config.rootDir = testDir)', { timeout: SPAWN_TEST_TIMEOUT }, () => {
   let run1: RunRecord;
 
   it('runs, exits non-zero because of the real failure, and prints the TestFly summary', () => {
@@ -161,5 +164,20 @@ describe('real Playwright run with the built reporter (file paths are relative t
     runPw(['tests/flaky.spec.ts'], { GITHUB_ACTIONS: 'true', GITHUB_REPOSITORY: 'acme/app', GITHUB_RUN_ID: '42', GITHUB_SHA: 'deadbeef' });
     const runs = readHistory(join(out(), 'history'));
     expect(runs[runs.length - 1]!.ci).toMatchObject({ provider: 'github-actions', commitSha: 'deadbeef', buildUrl: 'https://github.com/acme/app/actions/runs/42' });
+  });
+
+  it('applies quarantineFile without the fixture: quarantined failures do not fail the run', () => {
+    writeFileSync(join(proj, 'testfly-quarantine.yml'), 'quarantine:\n  - test: "tests/basic.spec.ts › Group › always fails"\n    reason: JIRA-7\n');
+    try {
+      const r = runPw(['tests/basic.spec.ts']);
+      expect(r.code).toBe(0);
+      const runs = readHistory(join(out(), 'history'));
+      const last = runs[runs.length - 1]!;
+      expect(last.status).toBe('passed');
+      expect(last.tests.find((x) => x.title === 'always fails')).toMatchObject({ quarantined: true, quarantineReason: 'JIRA-7', status: 'failed' });
+      expect(last.totals).toMatchObject({ failed: 0, quarantined: 1 });
+    } finally {
+      rmSync(join(proj, 'testfly-quarantine.yml'), { force: true });
+    }
   });
 });

@@ -1,0 +1,25 @@
+# Page "mobile_app": keys are used as locate('mobile_app.<name>').
+# Web (device emulation) selectors only. Native iOS/Android selectors are not supported yet
+# (@testfly/mobile is experimental and has no driver).
+welcome_title:
+  role: heading
+  name: Welcome to Mobile App
+
+onboarding_carousel:
+  label: carousel_onboarding
+  fallbacks:
+    - testid: view_carousel
+
+get_started_btn:
+  role: button
+  name: Get Started
+  fallbacks:
+    - testid: btn_get_started
+
+login_sheet:
+  label: sheet_login
+  fallbacks:
+    - testid: sheet_login
+
+gesture_status:
+  role: status

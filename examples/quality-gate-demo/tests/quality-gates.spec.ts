@@ -4,7 +4,7 @@ test.describe('Quality Gate Audits Spec Tests', () => {
   test('should pass A11y, Visual, and Performance audits', async ({
     page,
     a11y,
-    performance,
+    perf,
   }) => {
     await page.goto('/');
 
@@ -13,7 +13,7 @@ test.describe('Quality Gate Audits Spec Tests', () => {
     expect(a11yResults).toBeDefined();
 
     // 2. Web Vitals
-    const vitals = await performance.getVitals();
+    const vitals = await perf.getVitals();
     expect(vitals.ttfb).toBeGreaterThanOrEqual(0);
     expect(vitals.lcp).toBeGreaterThanOrEqual(0);
   });

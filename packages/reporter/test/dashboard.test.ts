@@ -12,7 +12,7 @@ const tmp = useTmpDirs();
 let browser: Browser;
 
 beforeAll(async () => {
-  browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM_PATH ?? '/opt/pw-browsers/chromium' });
+  browser = await chromium.launch({ executablePath: process.env.PW_CHROMIUM_PATH || undefined });
 });
 afterAll(async () => { await browser?.close(); });
 

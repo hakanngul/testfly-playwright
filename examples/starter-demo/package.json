@@ -7,15 +7,14 @@
     "clean": "testfly clean",
     "test": "testfly test",
     "test:ui": "testfly test --ui",
-    "test:report": "testfly report",
-    "test:report:allure": "testfly report --allure",
-    "test:report:cucumber": "testfly report --cucumber"
+    "report": "testfly report",
+    "report:html": "playwright show-report reports/playwright"
   },
-  "dependencies": {
-    "@testfly/playwright": "file:../.."
-  },
-
   "devDependencies": {
-    "allure-playwright": "^3.0.9"
+    "@playwright/test": "^1.50.0",
+    "@testfly/playwright": "^0.2.0-next.0",
+    "@types/node": "^22.10.0",
+    "allure-playwright": "^3.0.9",
+    "typescript": "~5.9.3"
   }
 }

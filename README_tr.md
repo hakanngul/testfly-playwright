@@ -1,292 +1,330 @@
-# TestFly Playwright (`@testfly/playwright`)
+# TestFly Playwright
 
-> **"Test Otomasyonunun Next.js'i"** — Sıfır boilerplate, tip-güvenli, her şey dahil (batteries-included) TypeScript & Playwright test otomasyon framework'ü.
+> `@playwright/test` üzerine kurulu, sıfır şablon kodlu, tip güvenli ve "pilleri dahil" TypeScript framework'ü: BDD, self-healing destekli tipli YAML locator'lar, API/DB/mail fixture'ları, kalite kontrolleri ve stabilite analitiği.
 
-[🇬🇧 English Documentation](./README.md) | [🇹🇷 Türkçe Dökümantasyon](./README_tr.md)
+[English](./README.md) | [Türkçe](./README_tr.md)
 
----
-
-## 🌟 Vizyon ve Felsefe
-
-TestFly'ın Java ekosistemindeki **"Spring Boot of Selenium"** felsefesini, modern web ve mobil dünyasının standardı olan **TypeScript & Playwright** ekosistemine taşıyoruz.
-
-- 🚀 **Zero-Boilerplate:** `createBdd`, karmaşık runner konfigürasyonları veya katmanlı tesisat kodları yok.
-- 🎭 **Native Playwright Motoru:** BDD testleri dahi `%100` saf Playwright motorunda (`@playwright/test`) koşar. Trace Viewer, UI Mode, Sharding ve Worker izolasyonu eksiksiz çalışır.
-- 🎯 **YAML Nesne Deposu & TypeGen:** `.yaml` seçici dosyalarından otomatik `locators/index.d.ts` üretimi ile %100 IDE otomatik tamamlama (Autocomplete) ve tip güvenliği.
-- 📱 **Mobilewright:** Native iOS & Android otomasyonu, otomatik cihaz tespiti (`DeviceDetector`) ve gelişmiş jestler (`swipe`, `longPress`, `tap`, `pinch`).
-- 🔋 **Her Şey Dahil (Batteries-Included):** UI, REST API (Zod şema doğrulamalı), DB & Redis, E-posta OTP yakalama, Görsel Karşılaştırma, Axe-core Erişilebilirlik ve Core Web Vitals tek bir zenginleştirilmiş `fixtures` ekosisteminde.
-- 🧠 **İzole Senaryo Durumu:** `scenarioContext` ve `testData` yöneticisi ile senaryolar arası dinamik veri taşıma ve `{{token}}` string interpolasyonu.
+> **Durum:** yayın öncesi (`0.2.0-next.0`). Paketler henüz npm'e yayınlanmadı. API'ler 1.0 öncesinde değişebilir.
 
 ---
 
-## 🏛️ Mimari Şema
+## Paketler
 
-```mermaid
-flowchart TB
-    subgraph UserLayer["1. Kullanıcı Katmanı (Sıfır Boilerplate)"]
-        direction LR
-        BDD["📂 .feature (Gherkin BDD)"]
-        Spec["📄 .spec.ts (Saf TypeScript Test)"]
-        YAML["🎯 locators/*.yaml (Seçici Kataloğu)"]
-    end
+Bu depo bir pnpm monorepo'sudur (`packages/*`):
 
-    subgraph TestFlyCore["2. @testfly/playwright (Çekirdek Motor)"]
-        direction TB
-        Entry["🚀 Public API<br/><code>import { Given, When, Then, test, expect, locate } from '@testfly/playwright'</code>"]
-        
-        subgraph InternalEngines["Dahili Motorlar"]
-            BDD_Bridge["⚡ BDD Adapter<br/>(playwright-bdd)"]
-            Config_Engine["⚙️ Config Engine<br/>(testfly.config.ts / Zod)"]
-            TypeGen["✨ Locator TypeGen<br/>(YAML to TypeScript .d.ts)"]
-            State_Engine["🧠 TestContext & DataManager<br/>(Thread-safe State & Data)"]
-        end
+| Paket | Açıklama |
+| :--- | :--- |
+| [`@testfly/playwright`](./packages/playwright/README.md) | Çekirdek framework: `defineConfig`, fixture'lar (`ctx`, `step`, `faker`, `api`, `db`, `redis`, `mail`, `locate`, `a11y`, `visual`, `perf`, `form`, `mock`, `session`), BDD giriş noktası, `testfly` CLI. |
+| [`@testfly/reporter`](./packages/reporter/README.md) | Bağımsız Playwright reporter'ı: koşum geçmişi, Flakiness Radar, kural tabanlı hata sınıflandırma (triage), karantina, kalite kapıları, LPT sharding, HTML dashboard. |
+| [`@testfly/ai`](./packages/ai/README.md) | Opsiyonel AI katmanı: `ai.act()`, `ai.byIntent()`, `toSatisfyAi` / `toViolateAi`, AI healing stratejisi, isteğe bağlı hata analizi reporter'ı, kayıt/tekrar (record/replay) önbelleği. |
+| [`create-testfly`](./packages/create-testfly/README.md) | Proje iskelet oluşturucu: `npm create testfly@latest`. |
+| `@testfly/mobile` | **Deneysel, private, yayınlanmıyor.** Henüz gerçek bir cihaz sürücüsü olmayan mobil yardımcılar. Desteklenen API'nin parçası değildir. |
 
-        subgraph Batteries["Hazır Entegre Fixture'lar"]
-            F_Page["🖥️ page (Playwright + Smart Helpers)"]
-            F_Locate["🎯 locate (Tip-Güvenli YAML Seçiciler)"]
-            F_API["🌐 api (Fluent REST + Zod Assert)"]
-            F_Mobile["📱 mobile & screen (iOS / Android Gestures)"]
-            F_DB["🗄️ db (SQL & Redis Cache)"]
-            F_Mail["✉️ mail (Mailpit / Mailtrap / IMAP)"]
-            F_Auth["🔑 auth (Session & StorageState)"]
-            F_Quality["🛡️ quality (Visual, A11y, Web Vitals)"]
-            F_Step["📝 step (Timeline Logger)"]
-        end
-    end
-
-    subgraph ExecutionLayer["3. Çalıştırma & Raporlama Katmanı"]
-        PW_Runner["⚡ Native Playwright Test Runner (@playwright/test)"]
-        Browser["🌐 Browsers & Devices (Chrome, Safari, Mobile)"]
-        Reports["📊 HTML Report + Allure Dashboard + Slack / Teams"]
-    end
-
-    %% Bağlantılar
-    BDD --> Entry
-    Spec --> Entry
-    YAML --> TypeGen
-    TypeGen --> F_Locate
-    Entry --> BDD_Bridge
-    Entry --> InternalEngines
-    
-    InternalEngines --> Batteries
-    Batteries --> PW_Runner
-    BDD_Bridge --> PW_Runner
-    PW_Runner --> Browser
-    PW_Runner --> Reports
-```
+Tasarım kararları [`docs/adr/ADR-001.md`](./docs/adr/ADR-001.md) dosyasında kayıtlıdır.
 
 ---
 
-## ⚡ Hızlı Başlangıç
+## İlkeler
 
-### 1. Yeni Proje Başlatma
+- **Native Playwright.** Her şey bir Playwright fixture'ı veya config yardımcısıdır. BDD senaryoları [`playwright-bdd`](https://github.com/vitalets/playwright-bdd) ile sıradan Playwright testlerine derlenir; Trace Viewer, UI modu, sharding ve worker izolasyonu değişmeden çalışır.
+- **Config `playwright.config.ts` içinde yaşar.** `@testfly/playwright/config` içindeki `defineConfig`, `testfly` anahtarını zod ile doğrular ve sonucu testlere worker fixture'ı `testfly` olarak verir. Ayrı bir config dosyası ve global singleton yoktur.
+- **Dürüst hatalar.** TestFly'ın her hatası sabit bir `code` (`TF_*`), mesaj ve genellikle bir `hint` içeren `TestFlyError`'dır. Eksik konfigürasyon veya opsiyonel bağımlılıklar hata fırlatır; TestFly sessizce sahte veriye düşmez. Bellek içi `mock` DB/mail arka uçları vardır ama yalnızca açıkça seçildiğinde kullanılır.
+- **Tek veri sözleşmesi.** Worker'lar reporter ile yalnızca sürümlü content type'lara sahip Playwright attachment'ları üzerinden konuşur (`@testfly/reporter/schema`).
+
+---
+
+## Hızlı Başlangıç
+
+### 1. Proje oluşturun
+
 ```bash
-npx @testfly/playwright init
+npm create testfly@latest my-tests          # features/steps örneği için --bdd ekleyin
+cd my-tests
+npm install
+npx playwright install chromium
+npx testfly locators                        # tipli locator anahtarlarını üret
+npm test                                    # `testfly test` çalıştırır
 ```
 
-### 2. YAML Seçici Tanımlama (`locators/login.yaml`)
+Veya mevcut bir projeye ekleyin:
+
+```bash
+npm i -D @testfly/playwright @playwright/test
+npx testfly init                            # config, örnek test, locator'lar, BDD örneği (atlamak için --no-bdd)
+```
+
+### 2. Yapılandırın (`playwright.config.ts`)
+
+```ts
+import { devices } from '@playwright/test';
+import { defineConfig } from '@testfly/playwright/config';
+
+export default defineConfig({
+  testDir: './tests',
+  testfly: {
+    baseUrl: 'https://demo.playwright.dev/todomvc', // use.baseURL olarak da atanır
+    env: 'local',                                   // veya TESTFLY_ENV
+    healing: { mode: 'rules' },                     // off | rules | ai
+    reporter: { qualityGate: { minPassRate: 95 } }, // @testfly/reporter otomatik eklenir
+    profiles: { ci: { healing: { mode: 'off' } } }, // env / TESTFLY_ENV "ci" olduğunda derin birleştirilir
+  },
+  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+});
+```
+
+`defineConfig` ayrıca `${VAR}` yer tutucularını `process.env` ve `.env` dosyasından çözer, proje bazlı `use: { testfly: {...} }` override'larını derin birleştirir, `testfly.bdd` tanımlıysa `playwright-bdd`'yi bağlar ve `testfly.reporter.enabled` `false` değilse `@testfly/reporter`'ı ekler.
+
+### 3. Locator'ları tanımlayın (`locators/login.yaml`)
+
+Her dosya bir sayfadır; **dosya adı sayfa adıdır** ve **her üst düzey anahtar bir locator'dır**. Testlerde kullanılan anahtar `<dosya adı>.<anahtar>` şeklindedir.
+
 ```yaml
-page: login
-elements:
-  username_field:
-    role: textbox
-    name: "Username"
-  password_field:
-    css: "#password"
-  login_button:
-    role: button
-    name: "Login"
+# locators/login.yaml  ->  locate('login.username'), locate('login.submit'), ...
+username:
+  role: textbox
+  name: Username
+password:
+  label: Password
+submit:
+  role: button
+  name: Login
+  fallbacks:                 # birincil seçici bir şey bulamazsa sırayla denenir
+    - testid: login-submit
+    - css: "#login-btn"
+error_banner: ".alert-error" # düz bir string CSS seçicisidir
 ```
 
-Seçici tiplerini derlemek için:
+Her tanım tam olarak bir seçici alanı kullanır: `role` (opsiyonel `name`, `exact`, `level` ile), `label`, `text`, `testid`, `placeholder`, `alt`, `title`, `css` veya `xpath`. Değiştiriciler: `nth`, `first`, `last`, `has_text`, `within` (üst locator'ın anahtarı) ve `fallbacks`. `web:` anahtarı tanımın takma adı olarak kabul edilir; `ios`/`android`/`mobile` anahtarları şu an yok sayılır.
+
+IDE otomatik tamamlaması için tipli anahtarları üretin (`locators/index.d.ts` yazar). Derleme zamanında her string kabul edilir; bilinmeyen bir anahtar çalışma zamanında `TF_LOCATOR_NOT_FOUND` ile hata verir:
+
 ```bash
 npx testfly locators
 ```
 
-### 3. BDD Senaryosu (`features/login.feature`)
-```gherkin
-Feature: Kullanıcı Giriş Akışı
+### 4. Test yazın
 
-  Scenario: Başarılı kullanıcı girişi
-    Given kullanıcı login sayfasını açar
-    When kullanıcı adı ve şifresini girer
-    And giriş yap butonuna tıklar
-    Then ana sayfa başarıyla görüntülenmelidir
-```
+```ts
+import { test, expect } from '@testfly/playwright';
 
-### 4. Step Tanımları (`steps/login.steps.ts`)
-```typescript
-import { Given, When, Then, expect } from '@testfly/playwright';
-
-Given('kullanıcı login sayfasını açar', async ({ page }) => {
+test('login', { tag: '@smoke' }, async ({ page, locate, step }) => {
   await page.goto('/login');
-});
 
-When('kullanıcı adı ve şifresini girer', async ({ locate }) => {
-  // %100 Tip Güvenli ve IDE Otomatik Tamamlama
-  await locate('login.username_field').fill('standard_user');
-  await locate('login.password_field').fill('secret_sauce');
-});
+  await step('Kimlik bilgilerini doldur', async () => {
+    await locate('login.username').fill('standard_user');
+    await locate('login.password').fill('secret_sauce');
+  });
+  await locate('login.submit').click();
 
-When('giriş yap butonuna tıklar', async ({ locate }) => {
-  await locate('login.login_button').click();
-});
-
-Then('ana sayfa başarıyla görüntülenmelidir', async ({ page }) => {
   await expect(page).toHaveURL(/inventory/);
 });
 ```
 
----
+### 5. Veya BDD yazın
 
-## 📱 Mobilewright: Native iOS & Android Otomasyonu
+```ts
+// playwright.config.ts
+export default defineConfig({
+  testfly: {
+    baseUrl: 'https://example.com',
+    bdd: { features: 'features/**/*.feature', steps: 'steps/**/*.ts' },
+  },
+});
+```
 
-TestFly Playwright, `{ mobile, screen }` fixture'ları ile Playwright deneyimini **Native Mobil Otomasyona** taşır:
-
-### 1. Mobil BDD Senaryosu (`features/mobile-onboarding.feature`)
 ```gherkin
-@mobile @ios @android
-Feature: Mobil Uygulama Tanıtım & Jestler
-
-  Scenario: Kullanıcı onboarding adımlarını kaydırarak tamamlar
-    Given mobil uygulama başlatılır
-    When kullanıcı karşılama ekranını "sol" yöne kaydırır
-    And "Başla" butonuna 1.5 saniye basılı tutar
-    Then giriş ekranı başarıyla görüntülenmelidir
+# features/login.feature
+Feature: Login
+  @smoke
+  Scenario: Successful login
+    Given I open the login page
+    When I log in as "standard_user"
+    Then the inventory is visible
 ```
 
-### 2. Mobil Step Tanımları (`steps/mobile.steps.ts`)
-```typescript
-import { Given, When, Then, expect } from '@testfly/playwright';
+```ts
+// steps/login.steps.ts
+import { Given, When, Then, expect } from '@testfly/playwright/bdd';
 
-Given('mobil uygulama başlatılır', async ({ mobile }) => {
-  await mobile.launchApp();
+Given('I open the login page', async ({ page }) => {
+  await page.goto('/login');
 });
 
-When('kullanıcı karşılama ekranını {string} yöne kaydırır', async ({ screen }, yon: string) => {
-  const carousel = screen.getByLabel('OnboardingCarousel');
-  await carousel.swipe(yon === 'sol' ? 'left' : 'right', { distance: 300 });
+When('I log in as {string}', async ({ locate }, user: string) => {
+  await locate('login.username').fill(user);
+  await locate('login.password').fill('secret_sauce');
+  await locate('login.submit').click();
 });
 
-When('{string} butonuna 1.5 saniye basılı tutar', async ({ screen }, buttonName: string) => {
-  const button = screen.getByText(buttonName);
-  await button.longPress(1500);
-});
-
-Then('giriş ekranı başarıyla görüntülenmelidir', async ({ screen }) => {
-  const header = screen.getByRole('header', { name: 'Hoş Geldiniz' });
-  expect(await header.toBeVisible()).toBe(true);
+Then('the inventory is visible', async ({ page }) => {
+  await expect(page).toHaveURL(/inventory/);
 });
 ```
 
-### 3. Çoklu Platform YAML Seçicileri (`locators/mobile.yaml`)
-Tek bir dosyada Web, iOS ve Android seçicilerini yönetin:
-```yaml
-page: mobile_login
-elements:
-  submit_btn:
-    web: { role: button, name: "Giriş Yap" }
-    ios: { label: "btn_signIn_ios" }
-    android: { testid: "btn_signIn_android" }
-```
-
-### 4. Cihaz Tespiti CLI Komutu
-Bağlı Android ve iOS emülatörlerini / fiziksel cihazları tarayın:
-```bash
-npx testfly mobile
-```
+Step tanımları tüm TestFly fixture'larını alır. `npx testfly test` ile çalıştırın (BDD yapılandırılmışsa önce `bddgen` çalışır).
 
 ---
 
-## 🔌 Omnichannel Full-Stack E2E Akışı
+## Fixture'lar
 
-TestFly; UI, REST API, Veritabanı, Redis ve E-posta adımlarını tek bir senaryoda harmanlar:
+Tüm fixture'lar `@testfly/playwright` içindeki `test` üzerinde (ve BDD step'lerinde) mevcuttur. Daha yalın bir kurulum için tekil setler (`coreTest`, `apiTest`, `dataTest`, `locatorTest`, `qualityTest`, `mockTest`, `sessionTest`, `quarantineTest`) `mergeTests` ile birleştirilebilir.
 
-```typescript
+| Fixture | Kapsam | Amaç |
+| :--- | :--- | :--- |
+| `testfly` | worker | Çözümlenmiş TestFly seçenekleri. |
+| `ctx` | test | Nokta yollu anahtar/değer deposu, `{{key}}` interpolasyonu, JSON/CSV yükleme (`ctx.load`, `ctx.loadJson`, `ctx.loadCsv`). |
+| `step` | test | `step('başlık', gövde)` ve `step.info/pass/warn/fail/attach`; reporter'ı besler. |
+| `faker` | test | Sahte veri (tekrarlanabilir değerler için `TESTFLY_FAKER_SEED`). |
+| `locate` / `locators` | test / worker | Fallback ve self-healing destekli tipli YAML locator'lar. |
+| `api` | test | HTTP istemcisi: yeniden deneme, auth yardımcıları, `graphql`, `pollUntil`, akıcı yanıt doğrulamaları. |
+| `db`, `redis`, `mail` | worker | Postgres/MySQL, Redis ve posta kutusu istemcileri (config ve opsiyonel sürücü paketi gerekir). |
+| `a11y`, `visual`, `perf`, `form` | test | axe-core denetimleri, ekran görüntüsü karşılaştırma, Web Vitals, akıllı form doldurma. |
+| `mock` | test | Route mock'lama ve istek doğrulamaları. |
+| `session` | test | Rol bazlı önbelleğe alınmış oturum (`defineSession` + `session.as(role)`). |
+
+### Uçtan uca (full-stack) örnek
+
+```ts
 import { test, expect } from '@testfly/playwright';
 
-test('Omnichannel Kullanıcı Kaydı ve OTP Doğrulama', async ({ api, db, mail, page, scenarioContext }) => {
-  // 1. API üzerinden kullanıcıyı oluştur
-  const res = await api.post('/api/v1/auth/register', {
-    data: { email: 'john.doe@testfly.dev', name: 'John Doe' },
-  });
-  expect(res.status).toBe(201);
-  scenarioContext.set('userId', res.data.id);
+test('e-posta OTP ile kayıt', async ({ api, db, mail, page, ctx }) => {
+  const email = `user-${Date.now()}@example.test`;
 
-  // 2. Redis önbelleğini doğrula
-  const cachedUser = await db.redis.get(`user:${scenarioContext.get('userId')}`);
-  expect(cachedUser).toBeDefined();
+  const res = await api.post('/api/register', { json: { email, name: 'Ada' } });
+  res.expectStatus(201);
+  ctx.set('userId', res.jsonPath('$.id'));
 
-  // 3. E-postaya gelen 6 haneli OTP kodunu yakala
-  const email = await mail.waitForEmail({
-    to: 'john.doe@testfly.dev',
-    subjectPattern: /Doğrulama Kodu/,
-    timeoutMs: 5000,
-  });
-  const otpCode = email.body.match(/\b\d{6}\b/)?.[0];
+  const message = await mail.waitForEmail({ to: email, subject: /verification code/i, timeout: 30_000 });
+  const code = mail.extractCode(message);
 
-  // 4. Web UI üzerinden OTP kodunu gir ve onayla
   await page.goto('/verify');
-  await page.fill('#otp-input', otpCode!);
-  await page.click('#submit-btn');
+  await page.getByLabel('Code').fill(code!);
+  await page.getByRole('button', { name: 'Verify' }).click();
 
-  // 5. Veritabanı tablosundaki güncel durumu kontrol et
-  const userRow = await db.query('SELECT status FROM users WHERE id = $1', [scenarioContext.get('userId')]);
-  expect(userRow[0].status).toBe('ACTIVE');
+  await db.expectValue('SELECT status FROM users WHERE id = $1', [ctx.require('userId')], 'ACTIVE');
 });
 ```
 
----
+Bu örnek için gereken config:
 
-## 🛡️ Kalite Kapıları: Görsel, Erişilebilirlik ve Performans
+```ts
+testfly: {
+  api: { baseUrl: 'https://api.example.com' },
+  db: { client: 'postgres', connectionString: '${DATABASE_URL}' }, // `pg` kurulu olmalı
+  mail: { provider: 'mailpit', url: 'http://localhost:8025' },
+}
+```
 
-```typescript
-import { test, expect } from '@testfly/playwright';
+Veritabanı istemcileri: `postgres` (`pg`), `mysql` (`mysql2`) veya açıkça seçilen bellek içi `mock`. Redis için `ioredis`, IMAP mail için `imapflow` gerekir. Mail sağlayıcıları: `mailpit`, `mailtrap`, `imap`, `mock`.
 
-test('Kalite Kapısı Denetimleri', async ({ page, visual, a11y, performance }) => {
+### Kalite kontrolleri
+
+```ts
+import { test } from '@testfly/playwright';
+
+test('ana sayfa kalitesi', async ({ page, a11y, visual, perf }) => {
   await page.goto('/');
 
-  // 1. Axe-core Erişilebilirlik Denetimi (WCAG 2.1 AA)
   await a11y.assertNoViolations({ tags: ['wcag2a', 'wcag2aa'] });
+  await visual.assertSnapshot('home', { mask: ['.ad-banner'] });
+  await perf.assertLcp(2500);
+  await perf.assertCls(0.1);
+  await perf.assertTtfb(600);
+});
+```
 
-  // 2. Piksel Hassasiyetli Görsel Snapshot Testi
-  await visual.assertSnapshot(page, 'homepage-hero');
+`perf.getVitals()` `ttfb`, `domContentLoaded`, `loadTime`, `fcp`, `lcp`, `cls` döndürür; tarayıcının raporlayamadığı metrik `null` olur (LCP/CLS yalnızca Chromium'da) ve bu metriği doğrulamak `TF_QUALITY_UNSUPPORTED` fırlatır.
 
-  // 3. Google Core Web Vitals Performans Bütçesi
-  await performance.assertThresholds({
-    lcp: 2500, // En geç 2.5s LCP
-    cls: 0.1,  // En fazla 0.1 CLS
-    ttfb: 600, // En fazla 600ms TTFB
-  });
+### Oturumlar
+
+```ts
+import { test, defineSession } from '@testfly/playwright';
+
+defineSession('admin', async (page) => {
+  await page.goto('/login');
+  await page.getByLabel('Email').fill(process.env.ADMIN_EMAIL!);
+  await page.getByLabel('Password').fill(process.env.ADMIN_PASSWORD!);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+});
+
+test('admin paneli', async ({ page, session }) => {
+  await session.as('admin'); // storage state bir kez oluşturulur ve .testfly/sessions altında önbelleğe alınır
+  await page.goto('/admin');
 });
 ```
 
 ---
 
-## 🛠️ CLI Komutları
+## Self-healing locator'lar
+
+`locate(key)` şu sırayla çözümlenir:
+
+1. YAML'daki birincil tanım,
+2. YAML `fallbacks` listesi,
+3. kayıtlı healing stratejileri, artan önceliğe göre: rules (10), fuzzy (20), AI (100; yalnızca `healing.mode: 'ai'` ve `@testfly/ai` kuruluysa).
+
+Her başarılı iyileştirme teste eklenir ve reporter'da gösterilir. Herhangi bir iyileştirme olduğunda koşumu düşürmek için `testfly.reporter.qualityGate.failOnHeal` kullanın. Özel stratejiler `registerHealingStrategy` ile eklenebilir.
+
+---
+
+## Reporter ve stabilite analitiği
+
+`@testfly/reporter`, `defineConfig` tarafından otomatik eklenir (veya herhangi bir Playwright projesinde kullanılabilir). Koşumdan sonra `.testfly/report/index.html` dosyasını açın (`npx testfly report`). Sundukları:
+
+- koşum geçmişi (`.testfly/history/run-*.v1.json`) ve **Flakiness Radar** (`STABLE` / `WATCH` / `HIGH`),
+- **kural tabanlı hata sınıflandırma** (`SYSTEM_FLAKY`, `TEST_BUG`, `APPLICATION_BUG`, `NEEDS_INVESTIGATION`); sıfır token, LLM yok,
+- `testfly-quarantine.yml` ile **karantina** (testler atlanır ve işaretlenir),
+- **kalite kapıları** (`minPassRate`, `maxFlaky`, `failOnHighFlakiness`, `failOnHeal`),
+- geçmişe dayalı **süre dengeli sharding** (`npx testfly shard --total 4 --index 1`).
+
+LLM tabanlı kök neden analizi ayrı ve isteğe bağlı olarak `@testfly/ai/reporter` reporter'ı ile sağlanır (`.testfly/report/ai-analysis.json` yazar). Bkz. [`packages/ai/README.md`](./packages/ai/README.md).
+
+---
+
+## CLI
+
+`testfly` komutu `@testfly/playwright` ile gelir.
 
 | Komut | Açıklama |
 | :--- | :--- |
-| `npx testfly test` | BDD (.feature) ve Spec (.spec.ts) testlerini koşar |
-| `npx testfly test --ui` | Etkileşimli Playwright UI modunu açar |
-| `npx testfly clean` | Geçici rapor ve kalıntıları temizler (`mvn clean` gibi) |
-| `npx testfly locators` | YAML seçicilerini tarar ve TypeScript `index.d.ts` üretir |
-| `npx testfly locators --watch` | YAML dosyalarını izler ve anında tipleri günceller |
-| `npx testfly mobile` | Bağlı Android ve iOS cihazlarını listeler |
-| `npx testfly doctor` | Ortam gereksinimlerini ve yapılandırma sağlığını denetler |
-| `npx testfly generate swagger.json` | OpenAPI şemasından otomatik BDD .feature senaryoları üretir |
-| `npx testfly ci github` | GitHub Actions CI/CD pipeline iş akışını (.yml) oluşturur |
-| `npx testfly report --allure` | Canlı Allure Dashboard raporunu sunar |
+| `testfly init [--force] [--no-bdd]` | Config, örnek testler, locator'lar ve `.gitignore` girdilerini oluşturur. |
+| `testfly doctor` | Node, Playwright, config, locator'lar ve BDD step'lerini kontrol eder. |
+| `testfly locators [-d <dir>] [-o <file>]` | Tipli locator anahtarlarını üretir (`locators/index.d.ts`). |
+| `testfly steps [--scaffold] [-f <features>] [-t <steps>]` | Tanımı olmayan feature step'lerini listeler; `--scaffold` taslakları `steps/unmapped.steps.ts` dosyasına yazar. |
+| `testfly generate --swagger <pathOrUrl> [-o <dir>]` | OpenAPI/Swagger dokümanından BDD feature'ları ve API step'leri üretir. |
+| `testfly test [args...]` | `bddgen` (BDD yapılandırılmışsa) ve `playwright test` çalıştırır. Seçenekler: `--clean`, `--ui`, `--headed`, `-p`, `-g`, `-r`, `-c`, `-w`, `--no-bdd`; ek argümanlar aynen iletilir. |
+| `testfly clean [--all]` | `.features-gen`, `test-results` ve raporları siler; `--all` koşum geçmişini de siler. |
+| `testfly shard --total <n> --index <i>` | Süre dengeli bir shard'ın dosyalarını yazdırır (`--format files\|json`). |
+| `testfly quarantine list [-f <file>]` | Aktif ve süresi dolmuş karantina girdilerini listeler. |
+| `testfly report [html] [-o <dir>]` | TestFly dashboard'unu veya `html` ile Playwright HTML raporunu açar. |
+| `testfly ci [github\|gitlab] [--pm <pm>] [--shards <n>] [--force]` | CI pipeline dosyası yazar. |
 
 ---
 
-## 📑 Dokümantasyon
+## Mobil
 
-- [Mimari ve Tasarım Detayları (`ARCHITECTURE.md`)](./ARCHITECTURE.md)
-- [MVP Kapsam Dokümanı (`MVP_SPEC.md`)](./MVP_SPEC.md)
-- [Geliştirme Yol Haritası (`ROADMAP.md`)](./ROADMAP.md)
+`packages/mobile` **deneysel** mobil yardımcılar içerir. Private'tır, yayınlanmaz, gerçek bir cihaz sürücüsü yoktur ve desteklenen API kapsamında değildir. Native iOS/Android otomasyonu bugün mevcut değildir.
 
 ---
 
-## 📄 Lisans
-Apache-2.0 © TestFly Team
+## Geliştirme
+
+```bash
+pnpm install --frozen-lockfile
+pnpm build
+pnpm typecheck
+pnpm test
+```
+
+Node.js >= 22 ve pnpm 10 gerektirir.
+
+## Dokümantasyon
+
+- [ADR-001: temel kararlar](./docs/adr/ADR-001.md)
+- [Mimari (`ARCHITECTURE.md`)](./ARCHITECTURE.md)
+- [MVP spesifikasyonu (`MVP_SPEC.md`)](./MVP_SPEC.md)
+- [Yol haritası (`ROADMAP.md`)](./ROADMAP.md)
+
+## Lisans
+
+Apache-2.0

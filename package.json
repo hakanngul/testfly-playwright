@@ -12,7 +12,8 @@
     "lint:package": "pnpm -r --filter \"./packages/*\" lint:package",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "pnpm build && changeset publish"
+    "check": "pnpm build && pnpm typecheck && pnpm test && pnpm lint:package",
+    "release": "pnpm build && pnpm typecheck && pnpm test && changeset publish"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
