@@ -15,3 +15,7 @@ When implementing new features, modifying existing flows, or writing automated t
    - Clean artifacts: `npx testfly clean` (or `npm run clean`)
    - Run tests: `npx testfly test` (or `npm test`)
    - Open reports: `npx testfly report --allure` (or `npm run test:report:allure`)
+
+## Skills and subagents
+- Repository skills live in `.agents/skills/` (linked as `.claude/skills/`): `tfp-change`, `tfp-verify`, `tfp-test-authoring`, `tfp-triage`, `tfp-docs`, `tfp-mobile`, `tfp-review`, `tech-research`, `testfly-bdd`.
+- Subagents for team-lead delegation live in `.claude/agents/` (ts-developer, mobile-developer, test-author, code-reviewer, ci-triage, docs-writer, researcher). They never commit or push; the lead does.
