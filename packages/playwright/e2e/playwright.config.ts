@@ -33,6 +33,7 @@ export default defineConfig({
       testMatch: /console-fail\.spec\.ts$/,
       use: { testfly: { consoleErrors: { mode: 'fail', ignore: ['^ignored'] } } },
     },
+    { name: 'load', testMatch: /load\.spec\.ts$/, use: { testfly: { load: { k6Path: process.env.K6_PATH || 'k6' } } } },
     // Every test in these specs is expected to FAIL (test.fail()); the vitest suite checks the error codes.
     { name: 'unconfigured', testMatch: /unconfigured\.spec\.ts$/ },
   ],

@@ -167,7 +167,7 @@ Step definitions receive every TestFly fixture. Run with `npx testfly test` (it 
 
 ## Fixtures
 
-All fixtures are available on `test` from `@testfly/playwright` (and in BDD steps). Individual sets (`coreTest`, `apiTest`, `dataTest`, `locatorTest`, `qualityTest`, `mockTest`, `sessionTest`, `quarantineTest`) can be combined with `mergeTests` for a leaner setup.
+All fixtures are available on `test` from `@testfly/playwright` (and in BDD steps). Individual sets (`coreTest`, `apiTest`, `dataTest`, `locatorTest`, `qualityTest`, `mockTest`, `sessionTest`, `quarantineTest`, `consoleTest`, `loadTest`) can be combined with `mergeTests` for a leaner setup.
 
 | Fixture | Scope | Purpose |
 | :--- | :--- | :--- |
@@ -181,6 +181,7 @@ All fixtures are available on `test` from `@testfly/playwright` (and in BDD step
 | `a11y`, `visual`, `perf`, `form` | test | axe-core audits, screenshot comparison, Web Vitals, smart form fill. |
 | `mock` | test | Route mocking and request assertions. |
 | `session` | test | Cached per-role login (`defineSession` + `session.as(role)`). |
+| `load` | test | k6 load tests: `load.run({ url, vus, duration, thresholds })` returns p95/p99, error rate and RPS (k6 installed separately). |
 
 ### Full-stack example
 
@@ -252,6 +253,28 @@ test('admin dashboard', async ({ page, session }) => {
   await page.goto('/admin');
 });
 ```
+
+### Load tests (k6)
+
+`load.run()` writes a k6 script for the given requests, runs [k6](https://grafana.com/docs/k6/latest/set-up/install-k6/) (installed separately; `testfly.load.k6Path` if it is not on PATH) and returns the summary. The k6 summary is attached as `k6-summary`.
+
+```ts
+test('product list under load', async ({ load }) => {
+  const result = await load.run({
+    url: '/api/products',                       // relative: testfly.api.baseUrl, testfly.baseUrl or use.baseURL
+    vus: 20,
+    duration: '1m',                             // or iterations: 500; rampUp: '10s'
+    thresholds: { p95Ms: 500, errorRate: 0.01 },
+  });
+  result.assertPassed();                        // TF_LOAD_THRESHOLDS_FAILED names the crossed thresholds
+  expect(result.durationMs.p99).toBeLessThan(900);
+});
+```
+
+- Several requests per iteration: `requests: [{ url, method: 'POST', body: { … }, headers }]`; `sleepSeconds` adds think time. Generated scripts check every response for a 2xx/3xx status.
+- An existing script: `load.run({ script: 'load/k6/checkout.js', env: { BASE_URL: '…' } })`.
+- Result: `passed`, `failedThresholds`, `requests`, `requestsPerSecond`, `errorRate`, `checksRate`, `durationMs` (`avg`, `min`, `med`, `max`, `p90`, `p95`, `p99`) and the raw `--summary-export`.
+- Errors: `TF_LOAD_K6_MISSING` (no k6), `TF_LOAD_RUN_FAILED` (k6 crashed or timed out after `testfly.load.timeoutMs`), `TF_LOAD_THRESHOLDS_FAILED`.
 
 ---
 

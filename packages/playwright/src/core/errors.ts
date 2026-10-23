@@ -55,6 +55,10 @@ export type TestFlyErrorCode =
   | 'TF_MOBILE_LAUNCH_FAILED'
   // browser console
   | 'TF_CONSOLE_ERRORS'
+  // load testing (k6)
+  | 'TF_LOAD_K6_MISSING'
+  | 'TF_LOAD_RUN_FAILED'
+  | 'TF_LOAD_THRESHOLDS_FAILED'
   // reporter / quality gates
   | 'TF_QUARANTINE_INVALID'
   | 'TF_QUALITY_GATE_FAILED'

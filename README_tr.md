@@ -167,7 +167,7 @@ Step tanımları tüm TestFly fixture'larını alır. `npx testfly test` ile ça
 
 ## Fixture'lar
 
-Tüm fixture'lar `@testfly/playwright` içindeki `test` üzerinde (ve BDD step'lerinde) mevcuttur. Daha yalın bir kurulum için tekil setler (`coreTest`, `apiTest`, `dataTest`, `locatorTest`, `qualityTest`, `mockTest`, `sessionTest`, `quarantineTest`) `mergeTests` ile birleştirilebilir.
+Tüm fixture'lar `@testfly/playwright` içindeki `test` üzerinde (ve BDD step'lerinde) mevcuttur. Daha yalın bir kurulum için tekil setler (`coreTest`, `apiTest`, `dataTest`, `locatorTest`, `qualityTest`, `mockTest`, `sessionTest`, `quarantineTest`, `consoleTest`, `loadTest`) `mergeTests` ile birleştirilebilir.
 
 | Fixture | Kapsam | Amaç |
 | :--- | :--- | :--- |
@@ -181,6 +181,7 @@ Tüm fixture'lar `@testfly/playwright` içindeki `test` üzerinde (ve BDD step'l
 | `a11y`, `visual`, `perf`, `form` | test | axe-core denetimleri, ekran görüntüsü karşılaştırma, Web Vitals, akıllı form doldurma. |
 | `mock` | test | Route mock'lama ve istek doğrulamaları. |
 | `session` | test | Rol bazlı önbelleğe alınmış oturum (`defineSession` + `session.as(role)`). |
+| `load` | test | k6 yük testleri: `load.run({ url, vus, duration, thresholds })` p95/p99, hata oranı ve RPS döndürür (k6 ayrıca kurulur). |
 
 ### Uçtan uca (full-stack) örnek
 
@@ -252,6 +253,28 @@ test('admin paneli', async ({ page, session }) => {
   await page.goto('/admin');
 });
 ```
+
+### Yük testleri (k6)
+
+`load.run()` verilen istekler için bir k6 betiği yazar, [k6](https://grafana.com/docs/k6/latest/set-up/install-k6/)'yı çalıştırır (ayrıca kurulur; PATH'te değilse `testfly.load.k6Path`) ve özeti döndürür. k6 özeti `k6-summary` olarak teste eklenir.
+
+```ts
+test('ürün listesi yük altında', async ({ load }) => {
+  const result = await load.run({
+    url: '/api/products',                       // göreli: testfly.api.baseUrl, testfly.baseUrl veya use.baseURL
+    vus: 20,
+    duration: '1m',                             // veya iterations: 500; rampUp: '10s'
+    thresholds: { p95Ms: 500, errorRate: 0.01 },
+  });
+  result.assertPassed();                        // TF_LOAD_THRESHOLDS_FAILED aşılan eşikleri listeler
+  expect(result.durationMs.p99).toBeLessThan(900);
+});
+```
+
+- İterasyon başına birden çok istek: `requests: [{ url, method: 'POST', body: { … }, headers }]`; `sleepSeconds` düşünme süresi ekler. Üretilen betikler her yanıtta 2xx/3xx durum kodunu kontrol eder.
+- Var olan bir betik: `load.run({ script: 'load/k6/checkout.js', env: { BASE_URL: '…' } })`.
+- Sonuç: `passed`, `failedThresholds`, `requests`, `requestsPerSecond`, `errorRate`, `checksRate`, `durationMs` (`avg`, `min`, `med`, `max`, `p90`, `p95`, `p99`) ve ham `--summary-export`.
+- Hatalar: `TF_LOAD_K6_MISSING` (k6 yok), `TF_LOAD_RUN_FAILED` (k6 çöktü veya `testfly.load.timeoutMs` sonrası zaman aşımı), `TF_LOAD_THRESHOLDS_FAILED`.
 
 ---
 

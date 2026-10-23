@@ -241,6 +241,14 @@ export const ReporterOptionsSchema = z.object({
  * `reporter: false` drops @testfly/reporter, `notifications: false` drops `reporter.notifications`,
  * `consoleErrors: false` forces `consoleErrors.mode = 'off'` and `quarantine: false` runs quarantined tests.
  */
+/** k6 load tests run by the `load` fixture. k6 itself is installed by the user. */
+export const LoadOptionsSchema = z.object({
+  /** k6 command; a full path when it is not on PATH. */
+  k6Path: z.string().min(1).default('k6'),
+  /** Upper bound of one `load.run()`, k6 start-up and summary included. */
+  timeoutMs: z.number().int().positive().default(600_000),
+});
+
 export const FeaturesSchema = z.object({
   healing: z.boolean().default(true),
   ai: z.boolean().default(true),
@@ -266,6 +274,7 @@ export const TestFlyOptionsSchema = z.object({
   ai: AiOptionsSchema.prefault({}),
   bdd: BddOptionsSchema.optional(),
   mobile: MobileOptionsSchema.optional(),
+  load: LoadOptionsSchema.prefault({}),
   reporter: ReporterOptionsSchema.prefault({}),
   features: FeaturesSchema.prefault({}),
   /**
@@ -292,3 +301,4 @@ export type SessionOptions = z.infer<typeof SessionOptionsSchema>;
 export type ConsoleErrorsOptions = z.infer<typeof ConsoleErrorsOptionsSchema>;
 export type FeatureFlags = z.infer<typeof FeaturesSchema>;
 export type MobileOptions = z.infer<typeof MobileOptionsSchema>;
+export type LoadOptions = z.infer<typeof LoadOptionsSchema>;

@@ -18,6 +18,7 @@ export {
   sessionTest,
   quarantineTest,
   consoleTest,
+  loadTest,
 } from './fixtures';
 export type {
   TestFlyFixtures,
@@ -32,7 +33,10 @@ export type {
   SessionFixtures,
   ConsoleFixtures,
   ConsoleErrorsApi,
+  LoadFixtures,
+  LoadApi,
 } from './fixtures';
+export type { LoadRunOptions, LoadRequest, LoadThresholds, LoadResult } from './core/load/k6';
 
 // Extra matchers (already registered on `expect`)
 export { testflyMatchers } from './assertions/matchers';
@@ -60,6 +64,7 @@ export type {
   ConsoleErrorsOptions,
   FeatureFlags,
   MobileOptions,
+  LoadOptions,
 } from './core/config/schema';
 
 // Helpers handed to tests (types only)

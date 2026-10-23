@@ -9,8 +9,9 @@ import { mockTest } from './mock';
 import { sessionTest } from './session';
 import { quarantineTest } from './quarantine';
 import { consoleTest } from './console';
+import { loadTest } from './load';
 
-export { coreTest, apiTest, dataTest, locatorTest, qualityTest, mockTest, sessionTest, quarantineTest, consoleTest };
+export { coreTest, apiTest, dataTest, locatorTest, qualityTest, mockTest, sessionTest, quarantineTest, consoleTest, loadTest };
 import type { CoreFixtures, CoreWorkerFixtures } from './core';
 import type { ApiFixtures } from './api';
 import type { DataWorkerFixtures } from './data';
@@ -19,6 +20,7 @@ import type { QualityFixtures } from './quality';
 import type { MockFixtures } from './mock';
 import type { SessionFixtures } from './session';
 import type { ConsoleFixtures } from './console';
+import type { LoadFixtures } from './load';
 
 export type { CoreFixtures, CoreWorkerFixtures } from './core';
 export type { ApiFixtures } from './api';
@@ -28,6 +30,7 @@ export type { QualityFixtures } from './quality';
 export type { MockFixtures } from './mock';
 export type { SessionFixtures } from './session';
 export type { ConsoleFixtures, ConsoleErrorsApi } from './console';
+export type { LoadFixtures, LoadApi } from './load';
 
 /**
  * The batteries-included `test`: every TestFly fixture set merged with Playwright's own.
@@ -35,7 +38,7 @@ export type { ConsoleFixtures, ConsoleErrorsApi } from './console';
  *
  * @public
  */
-export const test = mergeTests(coreTest, apiTest, dataTest, locatorTest, qualityTest, mockTest, sessionTest, quarantineTest, consoleTest);
+export const test = mergeTests(coreTest, apiTest, dataTest, locatorTest, qualityTest, mockTest, sessionTest, quarantineTest, consoleTest, loadTest);
 
 /** Fixture types of the default {@link test}. @public */
 export type TestFlyFixtures = CoreFixtures &
@@ -47,7 +50,8 @@ export type TestFlyFixtures = CoreFixtures &
   QualityFixtures &
   MockFixtures &
   SessionFixtures &
-  ConsoleFixtures;
+  ConsoleFixtures &
+  LoadFixtures;
 
 /**
  * Playwright's `expect` plus the TestFly matchers (`toBeValid`, `toHaveValidationMessage`, `toBeRequired`,

@@ -41,7 +41,7 @@ Bu doküman TestFly'ın fazlarını ve kilometre taşlarını içerir. İşaretl
 - [x] **Slack, Teams & Discord bildirimleri:** `@testfly/reporter` koşum sonunda `testfly.reporter.notifications` ile tanımlı webhook'lara mesaj gönderiyor (varsayılan: yalnızca başarısız koşumlarda).
 - [x] **TestFly (Java) paritesi, dalga 1:** ek `expect` matcher'ları (form doğrulama, şifre görünürlüğü, sayı sınırları, cookie/localStorage/pencere sayısı), `consoleErrors` fixture'ı, API anlamsal JSON yardımcıları, run başına `heal-log.json`, `features` aç/kapa paneli.
 - [x] **TestFly (Java) paritesi, dalga 2:** `api.batch` / `withInterceptor` / `saveTo` + charset, `expectJsonSchema` / `expectOpenApi` (opsiyonel `ajv`), `ctx.loadExcel` (opsiyonel `exceljs`) ve worker kapsamlı `suiteCtx`, sayfasız `mockServer` fixture'ı, TestRail + Xray Cloud senkronu, `@testfly/ai/reporter` `patches` (Auto-PR).
-- [ ] **Yük testi:** k6 sarmalayıcısı (TestFly'daki deklaratif yük testi karşılığı).
+- [x] **Yük testi:** k6 sarmalayıcısı: `load` fixture'ı (`load.run({ url, vus, duration, thresholds })`, mevcut betikler için `script`), kullanıcının kurduğu k6 ile.
 - [x] **TestRail & Xray senkronizasyonu:** `testfly.reporter.testManagement` (TestRail `@C1234`, Xray Cloud `@PROJ-123` etiketleriyle).
 
 ---
